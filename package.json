@@ -2,13 +2,19 @@
   "name": "gerenciamento-lojas-calculadora-precos",
   "version": "0.1.0",
   "private": true,
+  "description": "## Project setup ``` npm install ```",
+  "author": "",
   "scripts": {
     "serve": "vue-cli-service serve",
     "build": "vue-cli-service build",
-    "lint": "vue-cli-service lint"
+    "lint": "vue-cli-service lint",
+    "start": "node server.js"
   },
+  "main": "babel.config.js",
   "dependencies": {
     "core-js": "^3.8.3",
+    "cors": "^2.8.5",
+    "express": "^5.1.0",
     "register-service-worker": "^1.7.2",
     "vue": "^3.2.13",
     "vue-class-component": "^8.0.0-0",
@@ -52,5 +58,15 @@
     "last 2 versions",
     "not dead",
     "not ie 11"
-  ]
+  ],
+  "bugs": {
+    "url": "https://github.com/Jackson-Luis/gerenciamento-lojas-calculadora-precos/issues"
+  },
+  "homepage": "https://github.com/Jackson-Luis/gerenciamento-lojas-calculadora-precos#readme",
+  "keywords": [],
+  "license": "ISC",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/Jackson-Luis/gerenciamento-lojas-calculadora-precos.git"
+  }
 }

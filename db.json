@@ -1,0 +1,13 @@
+[
+  {
+    "cliente_nome": "João Silva",
+    "loja_nome": "Loja Exemplo",
+    "anuncios_total": 100,
+    "anuncios_realizados": 10,
+    "anuncios_otimizados": 5,
+    "visitas_semana": 200,
+    "produto_mais_visitado": "Produto X",
+    "vendas_total": 50,
+    "imagem": "caminho/para/imagem1.jpg"
+  }
+]

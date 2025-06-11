@@ -17,6 +17,9 @@ app.get('/lojas', (req, res) => {
 app.post('/lojas', (req, res) => {
   const data = JSON.parse(fs.readFileSync('./db.json'));
   const novaLoja = req.body;
+  // Gera novo id incremental
+  const maxId = data.length > 0 ? Math.max(...data.map(l => l.id || 0)) : 0;
+  novaLoja.id = maxId + 1;
   data.push(novaLoja);
   fs.writeFileSync('./db.json', JSON.stringify(data, null, 2));
   res.status(201).json(novaLoja);

@@ -51,7 +51,7 @@ let items: Loja[] = []
 
 onMounted(async () => {
   try {
-    const resp = await fetch('http://10.129.5.98:3001/lojas')
+    const resp = await fetch('http://localhost:3001/lojas')
     lojas.value = await resp.json()
     console.log('lojas', lojas.value)
     items = lojas.value
@@ -60,49 +60,49 @@ onMounted(async () => {
   }
 })
 
-console.log('items', items)
+// console.log('items', items)
 // Exemplo de funções para POST, PUT e DELETE (não utilizadas)
-async function exemploPostLoja() {
-  const novaLoja = {
-    cliente_nome: "Maria Souza",
-    loja_nome: "Loja Nova",
-    anuncios_total: 50,
-    anuncios_realizados: 5,
-    anuncios_otimizados: 2,
-    visitas_semana: 80,
-    produto_mais_visitado: "Produto Y",
-    vendas_total: 20,
-    imagem: null
-  }
-  await fetch('http://localhost:3001/lojas', {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify(novaLoja)
-  })
-}
+// async function exemploPostLoja() {
+//   const novaLoja = {
+//     cliente_nome: "Maria Souza",
+//     loja_nome: "Loja Nova",
+//     anuncios_total: 50,
+//     anuncios_realizados: 5,
+//     anuncios_otimizados: 2,
+//     visitas_semana: 80,
+//     produto_mais_visitado: "Produto Y",
+//     vendas_total: 20,
+//     imagem: null
+//   }
+//   await fetch('http://localhost:3001/lojas', {
+//     method: 'POST',
+//     headers: { 'Content-Type': 'application/json' },
+//     body: JSON.stringify(novaLoja)
+//   })
+// }
 
-async function exemploPutLoja(index: number) {
-  const lojaAtualizada = {
-    cliente_nome: "Maria Souza",
-    loja_nome: "Loja Atualizada",
-    anuncios_total: 60,
-    anuncios_realizados: 6,
-    anuncios_otimizados: 3,
-    visitas_semana: 90,
-    produto_mais_visitado: "Produto Z",
-    vendas_total: 25,
-    imagem: null
-  }
-  await fetch(`http://localhost:3001/lojas/${index}`, {
-    method: 'PUT',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify(lojaAtualizada)
-  })
-}
+// async function exemploPutLoja(index: number) {
+//   const lojaAtualizada = {
+//     cliente_nome: "Maria Souza",
+//     loja_nome: "Loja Atualizada",
+//     anuncios_total: 60,
+//     anuncios_realizados: 6,
+//     anuncios_otimizados: 3,
+//     visitas_semana: 90,
+//     produto_mais_visitado: "Produto Z",
+//     vendas_total: 25,
+//     imagem: null
+//   }
+//   await fetch(`http://localhost:3001/lojas/${index}`, {
+//     method: 'PUT',
+//     headers: { 'Content-Type': 'application/json' },
+//     body: JSON.stringify(lojaAtualizada)
+//   })
+// }
 
-async function exemploDeleteLoja(index: number) {
-  await fetch(`http://localhost:3001/lojas/${index}`, {
-    method: 'DELETE'
-  })
-}
+// async function exemploDeleteLoja(index: number) {
+//   await fetch(`http://localhost:3001/lojas/${index}`, {
+//     method: 'DELETE'
+//   })
+// }
 </script>

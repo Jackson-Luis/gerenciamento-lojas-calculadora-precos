@@ -75,7 +75,7 @@ function calcularMarketplace(base: number, taxa: number, percentuais: number[], 
         const pAcumulado = p / 100 * baseAcumulado
         let total = baseAcumulado + pAcumulado
         if (adicional) total += adicional(total)
-        return total.toFixed(2)
+        return total.toFixed(2).replace('.', ',')
     })
 }
 

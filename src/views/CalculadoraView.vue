@@ -87,7 +87,7 @@ const shopeeCalculos = computed(() => {
         baseValor,
         0.22,
         percentuais,
-        (total) => total >= 30 ? 8 : 4.5
+        (total) => 3
     )
 })
 

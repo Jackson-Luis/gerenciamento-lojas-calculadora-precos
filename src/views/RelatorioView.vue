@@ -22,22 +22,22 @@
           {{ item.nome }}
         </template>
         <template #cell(anuncios_total)="{ item }">
-          {{ item.anuncios_total }}
+          <input type="number" v-model.number="item.anuncios_total" @blur="atualizarLoja(item)" class="form-control form-control-sm" />
         </template>
         <template #cell(anuncios_realizados)="{ item }">
-          {{ item.anuncios_realizados }}
+          <input type="number" v-model.number="item.anuncios_realizados" @blur="atualizarLoja(item)" class="form-control form-control-sm" />
         </template>
         <template #cell(anuncios_otimizados)="{ item }">
-          {{ item.anuncios_otimizados }}
+          <input type="number" v-model.number="item.anuncios_otimizados" @blur="atualizarLoja(item)" class="form-control form-control-sm" />
         </template>
         <template #cell(visitas_semana)="{ item }">
-          {{ item.visitas_semana }}
+          <input type="number" v-model.number="item.visitas_semana" @blur="atualizarLoja(item)" class="form-control form-control-sm" />
         </template>
         <template #cell(produto_mais_visitado)="{ item }">
-          {{ item.produto_mais_visitado }}
+          <input v-model="item.produto_mais_visitado" @blur="atualizarLoja(item)" class="form-control form-control-sm" />
         </template>
         <template #cell(vendas_total)="{ item }">
-          {{ item.vendas_total }}
+          <input type="number" v-model.number="item.vendas_total" @blur="atualizarLoja(item)" class="form-control form-control-sm" />
         </template>
       </BTable>
     </div>
@@ -84,6 +84,14 @@ async function carregarLojas() {
   } finally {
     loading.value = false;
   }
+}
+
+async function atualizarLoja(loja: Loja) {
+  await fetch(`http://localhost:3001/lojas/${loja.id}`, {
+    method: "PUT",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(loja)
+  });
 }
 
 onMounted(carregarLojas);

@@ -88,6 +88,7 @@
 
 <script setup lang="ts">
 import { ref, onMounted } from 'vue'
+import { API_URL } from '../api'
 
 interface Loja {
   id?: number
@@ -132,9 +133,9 @@ const mostrarForm = ref(false)
 
 async function carregar() {
   const [lojasResp, funcsResp, clientesResp] = await Promise.all([
-    fetch('http://localhost:3001/lojas'),
-    fetch('http://localhost:3001/funcionarios'),
-    fetch('http://localhost:3001/clientes')
+    fetch(`${API_URL}/lojas`),
+    fetch(`${API_URL}/funcionarios`),
+    fetch(`${API_URL}/clientes`)
   ])
   lojas.value = await lojasResp.json()
   funcionarios.value = await funcsResp.json()
@@ -143,13 +144,13 @@ async function carregar() {
 
 async function salvar() {
   if (form.value.id) {
-    await fetch(`http://localhost:3001/lojas/${form.value.id}`, {
+    await fetch(`${API_URL}/lojas/${form.value.id}`, {
       method: 'PUT',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(form.value)
     })
   } else {
-    await fetch('http://localhost:3001/lojas', {
+    await fetch(`${API_URL}/lojas`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(form.value)
@@ -176,7 +177,7 @@ function cancelar() {
 
 async function excluir(id: number) {
   if (confirm('Excluir loja?')) {
-    await fetch(`http://localhost:3001/lojas/${id}`, { method: 'DELETE' })
+    await fetch(`${API_URL}/lojas/${id}`, { method: 'DELETE' })
     await carregar()
   }
 }

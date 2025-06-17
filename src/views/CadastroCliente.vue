@@ -45,6 +45,7 @@
 
 <script setup lang="ts">
 import { ref, onMounted } from 'vue'
+import { API_URL } from '../api'
 
 interface Cliente {
   id?: number
@@ -55,21 +56,21 @@ interface Cliente {
 const clientes = ref<Cliente[]>([])
 const form = ref<Cliente>({ nome: '', telefone: '' })
 const mostrarForm = ref(false)
-
+console.log(API_URL)
 async function carregar() {
-  const resp = await fetch('http://localhost:3001/clientes')
+  const resp = await fetch(`${API_URL}/clientes`)
   clientes.value = await resp.json()
 }
 
 async function salvar() {
   if (form.value.id) {
-    await fetch(`http://localhost:3001/clientes/${form.value.id}`, {
+    await fetch(`${API_URL}/clientes/${form.value.id}`, {
       method: 'PUT',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(form.value)
     })
   } else {
-    await fetch('http://localhost:3001/clientes', {
+    await fetch(`${API_URL}/clientes`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(form.value)
@@ -96,7 +97,7 @@ function cancelar() {
 
 async function excluir(id: number) {
   if (confirm('Excluir cliente?')) {
-    await fetch(`http://localhost:3001/clientes/${id}`, { method: 'DELETE' })
+    await fetch(`${API_URL}/clientes/${id}`, { method: 'DELETE' })
     await carregar()
   }
 }
@@ -106,17 +107,17 @@ function limpar() {
 }
 
 function maskTelefone(e: Event) {
-  let v = (e.target as HTMLInputElement).value.replace(/\D/g, '');
-  if (v.length > 11) v = v.slice(0, 11);
+  let v = (e.target as HTMLInputElement).value.replace(/\D/g, '')
+  if (v.length > 11) v = v.slice(0, 11)
   if (v.length > 6) {
-    v = v.replace(/^(\d{2})(\d{5})(\d{0,4}).*/, '($1) $2-$3');
+    v = v.replace(/^(\d{2})(\d{5})(\d{0,4}).*/, '($1) $2-$3')
   } else if (v.length > 2) {
-    v = v.replace(/^(\d{2})(\d{0,5})/, '($1) $2');
+    v = v.replace(/^(\d{2})(\d{0,5})/, '($1) $2')
   } else {
-    v = v.replace(/^(\d*)/, '($1');
+    v = v.replace(/^(\d*)/, '($1')
   }
-  (e.target as HTMLInputElement).value = v;
-  form.value.telefone = v;
+  (e.target as HTMLInputElement).value = v
+  form.value.telefone = v
 }
 
 onMounted(carregar)

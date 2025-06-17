@@ -1,3 +1,4 @@
+require('dotenv').config()
 const express = require('express');
 const cors = require('cors');
 const mysql = require('mysql2/promise');
@@ -9,11 +10,11 @@ app.use(express.json());
 
 // Configuração da conexão MySQL
 const pool = mysql.createPool({
-  host: process.env.MYSQLHOST || 'mainline.proxy.rlwy.net',
-  user: process.env.MYSQLUSER || 'root',
-  password: process.env.MYSQLPASSWORD || 'BSVFUPwHZFbQgtYTIaTiBHfegjsFPMzW', // coloque a senha do Railway aqui se for local
-  database: process.env.MYSQLDATABASE || 'railway',
-  port: process.env.MYSQLPORT ? Number(process.env.MYSQLPORT) : 48738,
+  host: process.env.MYSQLHOST,
+  user: process.env.MYSQLUSER,
+  password: process.env.MYSQLPASSWORD,
+  database: process.env.MYSQLDATABASE,
+  port: Number(process.env.MYSQLPORT),
   waitForConnections: true,
   connectionLimit: 10,
   queueLimit: 0

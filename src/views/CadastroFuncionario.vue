@@ -45,6 +45,7 @@
 
 <script setup lang="ts">
 import { ref, onMounted } from 'vue'
+import { API_URL } from '../api'
 
 interface Funcionario {
   id?: number
@@ -57,19 +58,19 @@ const form = ref<Funcionario>({ nome: '', telefone: '' })
 const mostrarForm = ref(false)
 
 async function carregar() {
-  const resp = await fetch('http://localhost:3001/funcionarios')
+  const resp = await fetch(`${API_URL}/funcionarios`)
   funcionarios.value = await resp.json()
 }
 
 async function salvar() {
   if (form.value.id) {
-    await fetch(`http://localhost:3001/funcionarios/${form.value.id}`, {
+    await fetch(`${API_URL}/funcionarios/${form.value.id}`, {
       method: 'PUT',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(form.value)
     })
   } else {
-    await fetch('http://localhost:3001/funcionarios', {
+    await fetch(`${API_URL}/funcionarios`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(form.value)
@@ -96,7 +97,7 @@ function cancelar() {
 
 async function excluir(id: number) {
   if (confirm('Excluir funcionário?')) {
-    await fetch(`http://localhost:3001/funcionarios/${id}`, { method: 'DELETE' })
+    await fetch(`${API_URL}/funcionarios/${id}`, { method: 'DELETE' })
     await carregar()
   }
 }

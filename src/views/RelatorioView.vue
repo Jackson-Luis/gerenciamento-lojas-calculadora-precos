@@ -47,6 +47,7 @@
 <script setup lang="ts">
 import { ref, onMounted } from "vue";
 import { BTable } from "bootstrap-vue-next";
+import { API_URL } from '../api'
 
 const fields = [
   { key: "funcionario_nome", label: "Funcionário" },
@@ -79,7 +80,7 @@ const loading = ref(true);
 async function carregarLojas() {
   loading.value = true;
   try {
-    const resp = await fetch("http://localhost:3001/lojas");
+    const resp = await fetch(`${API_URL}/lojas`);
     lojas.value = await resp.json();
   } finally {
     loading.value = false;
@@ -87,7 +88,7 @@ async function carregarLojas() {
 }
 
 async function atualizarLoja(loja: Loja) {
-  await fetch(`http://localhost:3001/lojas/${loja.id}`, {
+  await fetch(`${API_URL}/lojas/${loja.id}`, {
     method: "PUT",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify(loja)

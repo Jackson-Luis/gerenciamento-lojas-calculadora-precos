@@ -3,106 +3,88 @@
     <h2>Relatório de Lojas</h2>
     <div v-if="loading">Carregando...</div>
     <div v-else>
-      <BTable :bordered="true" :outlined="true" :hover="true" :fixed="true" :items="items" :fields="fields" />
-      <!-- <div v-for="(loja) in lojas" :key="loja.id" class="mb-3 p-2 border rounded">
-        <strong>{{ loja.loja_nome }}</strong> (Cliente: {{ loja.cliente_nome }})<br>
-        Anúncios total: {{ loja.anuncios_total }}<br>
-        Anúncios realizados: {{ loja.anuncios_realizados }}<br>
-        Anúncios otimizados: {{ loja.anuncios_otimizados }}<br>
-        Visitas semana: {{ loja.visitas_semana }}<br>
-        Produto mais visitado: {{ loja.produto_mais_visitado }}<br>
-        Vendas total: {{ loja.vendas_total }}<br>
-        <img v-if="loja.imagem" :src="loja.imagem" alt="Imagem" style="max-width:120px;max-height:80px;">
-      </div> -->
+      <BTable
+        v-if="lojas.length"
+        :bordered="true"
+        :outlined="true"
+        :hover="true"
+        :fixed="true"
+        :items="lojas"
+        :fields="fields"
+      >
+        <template #cell(funcionario_nome)="{ item }">
+          {{ item.funcionario_nome }}
+        </template>
+        <template #cell(cliente_nome)="{ item }">
+          {{ item.cliente_nome }}
+        </template>
+        <template #cell(nome)="{ item }">
+          {{ item.nome }}
+        </template>
+        <template #cell(anuncios_total)="{ item }">
+          {{ item.anuncios_total }}
+        </template>
+        <template #cell(anuncios_realizados)="{ item }">
+          {{ item.anuncios_realizados }}
+        </template>
+        <template #cell(anuncios_otimizados)="{ item }">
+          {{ item.anuncios_otimizados }}
+        </template>
+        <template #cell(visitas_semana)="{ item }">
+          {{ item.visitas_semana }}
+        </template>
+        <template #cell(produto_mais_visitado)="{ item }">
+          {{ item.produto_mais_visitado }}
+        </template>
+        <template #cell(vendas_total)="{ item }">
+          {{ item.vendas_total }}
+        </template>
+      </BTable>
     </div>
   </div>
 </template>
 
 <script setup lang="ts">
-import { ref, onMounted } from 'vue'
-import { BTable } from 'bootstrap-vue-next'
+import { ref, onMounted } from "vue";
+import { BTable } from "bootstrap-vue-next";
+
 const fields = [
-  'loja_nome',
-  'cliente_nome',
-  'anuncios_total',
-  'anuncios_realizados',
-  'anuncios_otimizados',
-  'visitas_semana',
-  'produto_mais_visitado',
-  'vendas_total',
-]
+  { key: "funcionario_nome", label: "Funcionário" },
+  { key: "cliente_nome", label: "Cliente" },
+  { key: "nome", label: "Loja" },
+  "anuncios_total",
+  "anuncios_realizados",
+  "anuncios_otimizados",
+  "visitas_semana",
+  "produto_mais_visitado",
+  "vendas_total"
+];
 
 interface Loja {
-  id: number
-  loja_nome: string
-  cliente_nome: string
-  anuncios_total: number
-  anuncios_realizados: number
-  anuncios_otimizados: number
-  visitas_semana: number
-  produto_mais_visitado: string
-  vendas_total: number
-  imagem?: string
+  id: number;
+  funcionario_nome: string;
+  cliente_nome: string;
+  nome: string;
+  anuncios_total: number;
+  anuncios_realizados: number;
+  anuncios_otimizados: number;
+  visitas_semana: number;
+  produto_mais_visitado: string;
+  vendas_total: number;
 }
 
-const lojas = ref<Loja[]>([])
-const loading = ref(true)
-let items: Loja[] = []
+const lojas = ref<Loja[]>([]);
+const loading = ref(true);
 
-onMounted(async () => {
+async function carregarLojas() {
+  loading.value = true;
   try {
-    const resp = await fetch('http://localhost:3001/lojas')
-    lojas.value = await resp.json()
-    console.log('lojas', lojas.value)
-    items = lojas.value
+    const resp = await fetch("http://localhost:3001/lojas");
+    lojas.value = await resp.json();
   } finally {
-    loading.value = false
+    loading.value = false;
   }
-})
+}
 
-// console.log('items', items)
-// Exemplo de funções para POST, PUT e DELETE (não utilizadas)
-// async function exemploPostLoja() {
-//   const novaLoja = {
-//     cliente_nome: "Maria Souza",
-//     loja_nome: "Loja Nova",
-//     anuncios_total: 50,
-//     anuncios_realizados: 5,
-//     anuncios_otimizados: 2,
-//     visitas_semana: 80,
-//     produto_mais_visitado: "Produto Y",
-//     vendas_total: 20,
-//     imagem: null
-//   }
-//   await fetch('http://localhost:3001/lojas', {
-//     method: 'POST',
-//     headers: { 'Content-Type': 'application/json' },
-//     body: JSON.stringify(novaLoja)
-//   })
-// }
-
-// async function exemploPutLoja(index: number) {
-//   const lojaAtualizada = {
-//     cliente_nome: "Maria Souza",
-//     loja_nome: "Loja Atualizada",
-//     anuncios_total: 60,
-//     anuncios_realizados: 6,
-//     anuncios_otimizados: 3,
-//     visitas_semana: 90,
-//     produto_mais_visitado: "Produto Z",
-//     vendas_total: 25,
-//     imagem: null
-//   }
-//   await fetch(`http://localhost:3001/lojas/${index}`, {
-//     method: 'PUT',
-//     headers: { 'Content-Type': 'application/json' },
-//     body: JSON.stringify(lojaAtualizada)
-//   })
-// }
-
-// async function exemploDeleteLoja(index: number) {
-//   await fetch(`http://localhost:3001/lojas/${index}`, {
-//     method: 'DELETE'
-//   })
-// }
+onMounted(carregarLojas);
 </script>

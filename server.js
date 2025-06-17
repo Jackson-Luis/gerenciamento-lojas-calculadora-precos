@@ -9,11 +9,11 @@ app.use(express.json());
 
 // Configuração da conexão MySQL
 const pool = mysql.createPool({
-  host: 'localhost',
-  user: 'root',
-  password: '', // senha conforme imagem
-  database: 'gerenciamento_loja', // nome do banco conforme imagem
-  port: 3306, // porta padrão do MySQL
+  host: process.env.MYSQLHOST || 'mainline.proxy.rlwy.net',
+  user: process.env.MYSQLUSER || 'root',
+  password: process.env.MYSQLPASSWORD || 'BSVFUPwHZFbQgtYTIaTiBHfegjsFPMzW', // coloque a senha do Railway aqui se for local
+  database: process.env.MYSQLDATABASE || 'railway',
+  port: process.env.MYSQLPORT ? Number(process.env.MYSQLPORT) : 48738,
   waitForConnections: true,
   connectionLimit: 10,
   queueLimit: 0

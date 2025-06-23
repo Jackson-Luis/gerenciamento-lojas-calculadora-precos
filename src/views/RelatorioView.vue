@@ -54,6 +54,7 @@ import { saveAs } from "file-saver";
 import ExcelJS from "exceljs";
 
 // 👇 Importa o modelo Excel local como ArrayBuffer (graças ao arraybuffer-loader)
+//@ts-ignore
 import modeloExcel from '@/assets/relatorio-semanal-modelo.xlsx';
 
 import { API_URL } from '../api';

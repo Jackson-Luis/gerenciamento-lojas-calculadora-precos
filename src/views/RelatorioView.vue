@@ -1,6 +1,9 @@
 <template>
   <div class="inicio">
     <h2>Relatório de Lojas</h2>
+    <div class="mb-3">
+      <button class="btn btn-primary btn-sm" @click="exportarRelatorioExcel">Exportar relatório Excel preenchido</button>
+    </div>
     <div v-if="loading">Carregando...</div>
     <div v-else>
       <BTable
@@ -47,7 +50,13 @@
 <script setup lang="ts">
 import { ref, onMounted } from "vue";
 import { BTable } from "bootstrap-vue-next";
-import { API_URL } from '../api'
+import { saveAs } from "file-saver";
+import ExcelJS from "exceljs";
+
+// 👇 Importa o modelo Excel local como ArrayBuffer (graças ao arraybuffer-loader)
+import modeloExcel from '@/assets/relatorio-semanal-modelo.xlsx';
+
+import { API_URL } from '../api';
 
 const fields = [
   { key: "funcionario_nome", label: "Funcionário" },
@@ -94,6 +103,77 @@ async function atualizarLoja(loja: Loja) {
     body: JSON.stringify(loja)
   });
 }
+
+function exportarRelatorioExcel() {
+  try {
+    const workbook = new ExcelJS.Workbook();
+    const worksheet = workbook.addWorksheet("Relatório");
+
+    // Cabeçalho com quebra de linha
+    const header = [
+      "Nome do cliente",
+      "Nome da loja",
+      "Quantos anuncios\nno total na loja",
+      "Quantos anuncios\nfeitos na semana",
+      "Quantos anuncios\notimizados na semana",
+      "Quantas visitas\nesta tendo na loja na semana",
+      "Qual produto é\nmais visitado no total",
+      "Quantas vendas\naté hoje no total"
+    ];
+
+    worksheet.addRow(header);
+
+    // Adiciona os dados das lojas
+    lojas.value.forEach(loja => {
+      worksheet.addRow([
+        loja.cliente_nome,
+        loja.nome,
+        loja.anuncios_total,
+        loja.anuncios_realizados,
+        loja.anuncios_otimizados,
+        loja.visitas_semana,
+        loja.produto_mais_visitado,
+        loja.vendas_total
+      ]);
+    });
+
+    // Formatação do cabeçalho
+    worksheet.getRow(1).height = 40;
+    worksheet.columns = [
+      { width: 20 },
+      { width: 20 },
+      { width: 25 },
+      { width: 28 },
+      { width: 30 },
+      { width: 35 },
+      { width: 35 },
+      { width: 28 }
+    ];
+
+    worksheet.getRow(1).eachCell(cell => {
+      cell.alignment = { vertical: "middle", horizontal: "center", wrapText: true };
+      cell.fill = {
+        type: "pattern",
+        pattern: "solid",
+        fgColor: { argb: "FFF4B084" } // laranja claro
+      };
+      cell.font = { bold: true };
+    });
+
+    // Gera o arquivo e faz download
+    workbook.xlsx.writeBuffer().then(buffer => {
+      const blob = new Blob([buffer], {
+        type: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+      });
+      const nome = `relatorio-${new Date().toISOString().slice(0, 10)}.xlsx`;
+      saveAs(blob, nome);
+    });
+  } catch (err) {
+    alert('Erro ao exportar relatório.');
+    console.error(err);
+  }
+}
+
 
 onMounted(carregarLojas);
 </script>

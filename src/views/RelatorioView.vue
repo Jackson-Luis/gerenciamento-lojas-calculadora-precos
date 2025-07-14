@@ -86,10 +86,20 @@ const loading = ref(true);
 async function carregarLojas() {
   loading.value = true;
   try {
+    let headers: Record<string, string> = {};
+    const token = localStorage.getItem('token');
+    // Para login de homologação, simula resposta sem acessar o backend protegido
+    if (token === 'homolog-token') {
+      // Simule dados fake ou deixe vazio
+      lojas.value = [];
+      loading.value = false;
+      return;
+    }
+    if (token) {
+      headers['Authorization'] = 'Bearer ' + token;
+    }
     const resp = await fetch(`${API_URL}/lojas`, {
-      headers: {
-        'Authorization': 'Bearer ' + localStorage.getItem('token')
-      }
+      headers
     });
     lojas.value = await resp.json();
   } finally {
@@ -98,12 +108,16 @@ async function carregarLojas() {
 }
 
 async function atualizarLoja(loja: Loja) {
+  let headers: Record<string, string> = { "Content-Type": "application/json" };
+  const token = localStorage.getItem('token');
+  if (token && token !== 'homolog-token') {
+    headers['Authorization'] = 'Bearer ' + token;
+  }
+  // Não faz nada se for homologação
+  if (token === 'homolog-token') return;
   await fetch(`${API_URL}/lojas/${loja.id}`, {
     method: "PUT",
-    headers: {
-      "Content-Type": "application/json",
-      "Authorization": "Bearer " + localStorage.getItem('token')
-    },
+    headers,
     body: JSON.stringify(loja)
   });
 }

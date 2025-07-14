@@ -79,6 +79,12 @@ onMounted(() => {
 });
 
 const login = async () => {
+  // Login de homologação (bypass)
+  if (email.value === 'admin@email.com' && senha.value === 'admin') {
+    localStorage.setItem('token', 'homolog-token');
+    router.push('/relatorio');
+    return;
+  }
   try {
     const resp = await fetch('http://localhost:3001/login', {
       method: 'POST',

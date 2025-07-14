@@ -53,10 +53,6 @@ import { BTable } from "bootstrap-vue-next";
 import { saveAs } from "file-saver";
 import ExcelJS from "exceljs";
 
-// 👇 Importa o modelo Excel local como ArrayBuffer (graças ao arraybuffer-loader)
-//@ts-ignore
-import modeloExcel from '@/assets/relatorio-semanal-modelo.xlsx';
-
 import { API_URL } from '../api';
 
 const fields = [
@@ -90,7 +86,11 @@ const loading = ref(true);
 async function carregarLojas() {
   loading.value = true;
   try {
-    const resp = await fetch(`${API_URL}/lojas`);
+    const resp = await fetch(`${API_URL}/lojas`, {
+      headers: {
+        'Authorization': 'Bearer ' + localStorage.getItem('token')
+      }
+    });
     lojas.value = await resp.json();
   } finally {
     loading.value = false;
@@ -100,7 +100,10 @@ async function carregarLojas() {
 async function atualizarLoja(loja: Loja) {
   await fetch(`${API_URL}/lojas/${loja.id}`, {
     method: "PUT",
-    headers: { "Content-Type": "application/json" },
+    headers: {
+      "Content-Type": "application/json",
+      "Authorization": "Bearer " + localStorage.getItem('token')
+    },
     body: JSON.stringify(loja)
   });
 }

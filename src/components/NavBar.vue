@@ -7,8 +7,7 @@
     <BCollapse id="nav-collapse" is-nav :visible="collapseVisible">
       <BNavbarNav class="w-100 justify-content-around">
         <BNavItem to="/cadastro-funcionario" tag="router-link"
-          >Funcionários</BNavItem
-        >
+          >Funcionários</BNavItem>
         <BNavItem to="/cadastro-cliente" tag="router-link">Clientes</BNavItem>
         <BNavItem to="/cadastro-loja" tag="router-link">Lojas</BNavItem>
         <BNavItem to="/relatorio" tag="router-link">Relatório</BNavItem>
@@ -23,7 +22,6 @@ import { defineProps, defineEmits } from "vue";
 import {
   vBColorMode,
   BNavbar,
-  BNavbarBrand,
   BNavbarToggle,
   BCollapse,
   BNavbarNav,

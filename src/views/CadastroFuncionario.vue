@@ -8,6 +8,14 @@
         <input v-model="form.nome" class="form-control" required />
       </div>
       <div class="mb-2">
+        <label>Email:</label>
+        <input v-model="form.email" class="form-control" type="email" required />
+      </div>
+      <div class="mb-2">
+        <label>Senha:</label>
+        <input v-model="form.senha" class="form-control" type="password" :required="!form.id" autocomplete="new-password" />
+      </div>
+      <div class="mb-2">
         <label>Telefone:</label>
         <input
           v-model="form.telefone"
@@ -25,6 +33,7 @@
       <thead>
         <tr>
           <th>Nome</th>
+          <th>Email</th>
           <th>Telefone</th>
           <th>Ações</th>
         </tr>
@@ -32,6 +41,7 @@
       <tbody>
         <tr v-for="f in funcionarios" :key="f.id">
           <td>{{ f.nome }}</td>
+          <td>{{ f.email }}</td>
           <td>{{ f.telefone }}</td>
           <td>
             <button class="btn btn-primary btn-sm" @click="editar(f)">Editar</button>
@@ -51,6 +61,8 @@ interface Funcionario {
   id?: number
   nome: string
   telefone: string
+  email?: string
+  senha?: string
 }
 
 const funcionarios = ref<Funcionario[]>([])
@@ -103,7 +115,7 @@ async function excluir(id: number) {
 }
 
 function limpar() {
-  form.value = { nome: '', telefone: '' }
+  form.value = { nome: '', telefone: '', email: '', senha: '' }
 }
 
 function maskTelefone(e: Event) {

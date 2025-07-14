@@ -2,8 +2,11 @@ require('dotenv').config()
 const express = require('express');
 const cors = require('cors');
 const mysql = require('mysql2/promise');
+const jwt = require('jsonwebtoken');
+const bcrypt = require('bcrypt');
 const app = express();
 const PORT = 3001;
+const SECRET = process.env.JWT_SECRET || 'segredo_super_secreto';
 
 app.use(cors());
 app.use(express.json());
@@ -20,8 +23,44 @@ const pool = mysql.createPool({
   queueLimit: 0
 });
 
+// Middleware para proteger rotas
+function autenticarToken(req, res, next) {
+  const authHeader = req.headers['authorization'];
+  const token = authHeader && authHeader.split(' ')[1];
+  if (!token) return res.status(401).json({ error: 'Token não fornecido' });
+
+  jwt.verify(token, SECRET, (err, user) => {
+    if (err) return res.status(403).json({ error: 'Token inválido' });
+    req.user = user;
+    next();
+  });
+}
+
+// Rota de login usando tabela funcionario (com bcrypt)
+app.post('/login', async (req, res) => {
+  const { email, senha } = req.body;
+  try {
+    const [rows] = await pool.query(
+      'SELECT id, nome, email, senha FROM funcionario WHERE email = ? LIMIT 1',
+      [email]
+    );
+    if (rows.length > 0) {
+      const funcionario = rows[0];
+      const senhaCorreta = await bcrypt.compare(senha, funcionario.senha);
+      if (senhaCorreta) {
+        const user = { id: funcionario.id, nome: funcionario.nome, email: funcionario.email };
+        const token = jwt.sign(user, SECRET, { expiresIn: '1h' });
+        return res.json({ token, user });
+      }
+    }
+    res.status(401).json({ error: 'Credenciais inválidas' });
+  } catch (err) {
+    res.status(500).json({ error: 'Erro ao autenticar', details: err });
+  }
+});
+
 // GET all stores
-app.get('/lojas', async (req, res) => {
+app.get('/lojas', autenticarToken, async (req, res) => {
   try {
     const [rows] = await pool.query(`
       SELECT 
@@ -48,7 +87,7 @@ app.get('/lojas', async (req, res) => {
 });
 
 // POST new store
-app.post('/lojas', async (req, res) => {
+app.post('/lojas', autenticarToken, async (req, res) => {
   try {
     const {
       funcionario_id,
@@ -74,7 +113,7 @@ app.post('/lojas', async (req, res) => {
 });
 
 // PUT update store by id
-app.put('/lojas/:id', async (req, res) => {
+app.put('/lojas/:id', autenticarToken, async (req, res) => {
   try {
     const id = parseInt(req.params.id, 10);
     const {
@@ -105,7 +144,7 @@ app.put('/lojas/:id', async (req, res) => {
 });
 
 // DELETE store by id
-app.delete('/lojas/:id', async (req, res) => {
+app.delete('/lojas/:id', autenticarToken, async (req, res) => {
   try {
     const id = parseInt(req.params.id, 10);
     const [result] = await pool.query('DELETE FROM loja WHERE id=?', [id]);
@@ -120,7 +159,7 @@ app.delete('/lojas/:id', async (req, res) => {
 });
 
 // CRUD FUNCIONARIO
-app.get('/funcionarios', async (req, res) => {
+app.get('/funcionarios', autenticarToken, async (req, res) => {
   try {
     const [rows] = await pool.query('SELECT * FROM funcionario');
     res.json(rows);
@@ -129,29 +168,36 @@ app.get('/funcionarios', async (req, res) => {
   }
 });
 
-app.post('/funcionarios', async (req, res) => {
+app.post('/funcionarios', autenticarToken, async (req, res) => {
   try {
-    const { nome, telefone } = req.body;
+    const { nome, telefone, email, senha } = req.body;
+    const senhaHash = await bcrypt.hash(senha, 10);
     const [result] = await pool.query(
-      'INSERT INTO funcionario (nome, telefone) VALUES (?, ?)',
-      [nome, telefone]
+      'INSERT INTO funcionario (nome, telefone, email, senha) VALUES (?, ?, ?, ?)',
+      [nome, telefone, email, senhaHash]
     );
-    res.status(201).json({ id: result.insertId, nome, telefone });
+    res.status(201).json({ id: result.insertId, nome, telefone, email });
   } catch (err) {
     res.status(500).json({ error: 'Erro ao criar funcionário', details: err });
   }
 });
 
-app.put('/funcionarios/:id', async (req, res) => {
+app.put('/funcionarios/:id', autenticarToken, async (req, res) => {
   try {
     const id = parseInt(req.params.id, 10);
-    const { nome, telefone } = req.body;
-    const [result] = await pool.query(
-      'UPDATE funcionario SET nome=?, telefone=? WHERE id=?',
-      [nome, telefone, id]
-    );
+    const { nome, telefone, email, senha } = req.body;
+    let query, params;
+    if (senha) {
+      const senhaHash = await bcrypt.hash(senha, 10);
+      query = 'UPDATE funcionario SET nome=?, telefone=?, email=?, senha=? WHERE id=?';
+      params = [nome, telefone, email, senhaHash, id];
+    } else {
+      query = 'UPDATE funcionario SET nome=?, telefone=?, email=? WHERE id=?';
+      params = [nome, telefone, email, id];
+    }
+    const [result] = await pool.query(query, params);
     if (result.affectedRows) {
-      res.json({ id, nome, telefone });
+      res.json({ id, nome, telefone, email });
     } else {
       res.status(404).json({ error: 'Funcionário não encontrado' });
     }
@@ -160,7 +206,7 @@ app.put('/funcionarios/:id', async (req, res) => {
   }
 });
 
-app.delete('/funcionarios/:id', async (req, res) => {
+app.delete('/funcionarios/:id', autenticarToken, async (req, res) => {
   try {
     const id = parseInt(req.params.id, 10);
     const [result] = await pool.query('DELETE FROM funcionario WHERE id=?', [id]);
@@ -175,7 +221,7 @@ app.delete('/funcionarios/:id', async (req, res) => {
 });
 
 // CRUD CLIENTE
-app.get('/clientes', async (req, res) => {
+app.get('/clientes', autenticarToken, async (req, res) => {
   try {
     const [rows] = await pool.query('SELECT * FROM cliente');
     res.json(rows);
@@ -184,7 +230,7 @@ app.get('/clientes', async (req, res) => {
   }
 });
 
-app.post('/clientes', async (req, res) => {
+app.post('/clientes', autenticarToken, async (req, res) => {
   try {
     const { nome, telefone } = req.body;
     const [result] = await pool.query(
@@ -197,7 +243,7 @@ app.post('/clientes', async (req, res) => {
   }
 });
 
-app.put('/clientes/:id', async (req, res) => {
+app.put('/clientes/:id', autenticarToken, async (req, res) => {
   try {
     const id = parseInt(req.params.id, 10);
     const { nome, telefone } = req.body;
@@ -215,7 +261,7 @@ app.put('/clientes/:id', async (req, res) => {
   }
 });
 
-app.delete('/clientes/:id', async (req, res) => {
+app.delete('/clientes/:id', autenticarToken, async (req, res) => {
   try {
     const id = parseInt(req.params.id, 10);
     const [result] = await pool.query('DELETE FROM cliente WHERE id=?', [id]);

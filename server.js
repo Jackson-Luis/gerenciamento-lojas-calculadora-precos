@@ -1,14 +1,14 @@
-require('dotenv').config()
+require('dotenv').config();
 const express = require('express');
 const cors = require('cors');
 const mysql = require('mysql2/promise');
 const jwt = require('jsonwebtoken');
 const bcrypt = require('bcrypt');
 const app = express();
-const PORT = 3001;
+const PORT = process.env.PORT || 3001;
 const SECRET = process.env.JWT_SECRET || 'segredo_super_secreto';
 
-// CORS config: permite credenciais e qualquer origem em dev
+// --- CORS CONFIG ---
 app.use(cors({
   origin: (origin, callback) => callback(null, true),
   credentials: true,
@@ -17,7 +17,7 @@ app.use(cors({
 }));
 app.use(express.json());
 
-// Configuração da conexão MySQL
+// --- MYSQL POOL ---
 const pool = mysql.createPool({
   host: process.env.MYSQLHOST,
   user: process.env.MYSQLUSER,
@@ -29,11 +29,11 @@ const pool = mysql.createPool({
   queueLimit: 0
 });
 
-// Middleware para proteger rotas
+// --- AUTH MIDDLEWARE ---
 function autenticarToken(req, res, next) {
   const authHeader = req.headers['authorization'];
   const token = authHeader && authHeader.split(' ')[1];
-  // Permite o token de homologação em dev
+  // Homologation/dev bypass
   if (
     process.env.NODE_ENV !== 'production' &&
     token === 'homolog-token'
@@ -42,7 +42,6 @@ function autenticarToken(req, res, next) {
     return next();
   }
   if (!token) return res.status(401).json({ error: 'Token não fornecido' });
-
   jwt.verify(token, SECRET, (err, user) => {
     if (err) return res.status(403).json({ error: 'Token inválido' });
     req.user = user;
@@ -50,22 +49,19 @@ function autenticarToken(req, res, next) {
   });
 }
 
-// Rota de login usando tabela funcionario (com bcrypt)
+// --- LOGIN ---
 app.post('/login', async (req, res) => {
   const { email, senha } = req.body;
-
-  // Login de homologação apenas em ambiente de desenvolvimento
+  // Homologation/dev login
   if (
     process.env.NODE_ENV !== 'production' &&
     email === 'admin@email.com' &&
     senha === 'admin'
   ) {
-    // Simula um usuário admin
     const user = { id: 0, nome: 'Admin', email: 'admin@email.com' };
     const token = jwt.sign(user, SECRET, { expiresIn: '1h' });
     return res.json({ token, user });
   }
-
   try {
     const [rows] = await pool.query(
       'SELECT id, nome, email, senha FROM funcionario WHERE email = ? LIMIT 1',
@@ -73,7 +69,6 @@ app.post('/login', async (req, res) => {
     );
     if (rows.length > 0) {
       const funcionario = rows[0];
-      // Garante que senha e funcionario.senha existem e são strings
       if (typeof senha === 'string' && typeof funcionario.senha === 'string') {
         const senhaCorreta = await bcrypt.compare(senha, funcionario.senha);
         if (senhaCorreta) {
@@ -89,109 +84,10 @@ app.post('/login', async (req, res) => {
   }
 });
 
-// GET all stores
-app.get('/lojas', autenticarToken, async (req, res) => {
-  try {
-    const [rows] = await pool.query(`
-      SELECT 
-        l.id, 
-        l.nome, 
-        c.nome AS cliente_nome,
-        c.id AS cliente_id,
-        f.nome AS funcionario_nome,
-        f.id AS funcionario_id,
-        l.anuncios_total, 
-        l.anuncios_realizados, 
-        l.anuncios_otimizados, 
-        l.visitas_semana, 
-        l.produto_mais_visitado, 
-        l.vendas_total
-      FROM loja l
-      JOIN cliente c ON l.cliente_id = c.id
-      JOIN funcionario f ON l.funcionario_id = f.id
-    `);
-    res.json(rows);
-  } catch (err) {
-    res.status(500).json({ error: 'Erro ao buscar lojas', details: err });
-  }
-});
-
-// POST new store
-app.post('/lojas', autenticarToken, async (req, res) => {
-  try {
-    const {
-      funcionario_id,
-      cliente_id,
-      nome,
-      anuncios_total,
-      anuncios_realizados,
-      anuncios_otimizados,
-      visitas_semana,
-      produto_mais_visitado,
-      vendas_total
-    } = req.body;
-
-    const [result] = await pool.query(
-      `INSERT INTO loja (funcionario_id, cliente_id, nome, anuncios_total, anuncios_realizados, anuncios_otimizados, visitas_semana, produto_mais_visitado, vendas_total)
-       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`,
-      [funcionario_id, cliente_id, nome, anuncios_total, anuncios_realizados, anuncios_otimizados, visitas_semana, produto_mais_visitado, vendas_total]
-    );
-    res.status(201).json({ id: result.insertId, ...req.body });
-  } catch (err) {
-    res.status(500).json({ error: 'Erro ao criar loja', details: err });
-  }
-});
-
-// PUT update store by id
-app.put('/lojas/:id', autenticarToken, async (req, res) => {
-  try {
-    const id = parseInt(req.params.id, 10);
-    const {
-      funcionario_id,
-      cliente_id,
-      nome,
-      anuncios_total,
-      anuncios_realizados,
-      anuncios_otimizados,
-      visitas_semana,
-      produto_mais_visitado,
-      vendas_total
-    } = req.body;
-
-    const [result] = await pool.query(
-      `UPDATE loja SET funcionario_id=?, cliente_id=?, nome=?, anuncios_total=?, anuncios_realizados=?, anuncios_otimizados=?, visitas_semana=?, produto_mais_visitado=?, vendas_total=?
-       WHERE id=?`,
-      [funcionario_id, cliente_id, nome, anuncios_total, anuncios_realizados, anuncios_otimizados, visitas_semana, produto_mais_visitado, vendas_total, id]
-    );
-    if (result.affectedRows) {
-      res.json({ id, ...req.body });
-    } else {
-      res.status(404).json({ error: 'Loja não encontrada' });
-    }
-  } catch (err) {
-    res.status(500).json({ error: 'Erro ao atualizar loja', details: err });
-  }
-});
-
-// DELETE store by id
-app.delete('/lojas/:id', autenticarToken, async (req, res) => {
-  try {
-    const id = parseInt(req.params.id, 10);
-    const [result] = await pool.query('DELETE FROM loja WHERE id=?', [id]);
-    if (result.affectedRows) {
-      res.json({ success: true });
-    } else {
-      res.status(404).json({ error: 'Loja não encontrada' });
-    }
-  } catch (err) {
-    res.status(500).json({ error: 'Erro ao excluir loja', details: err });
-  }
-});
-
-// CRUD FUNCIONARIO (proteja todas as rotas exceto login)
+// --- CRUD FUNCIONARIO ---
 app.get('/funcionarios', autenticarToken, async (req, res) => {
   try {
-    const [rows] = await pool.query('SELECT * FROM funcionario');
+    const [rows] = await pool.query('SELECT id, nome, telefone, email FROM funcionario');
     res.json(rows);
   } catch (err) {
     res.status(500).json({ error: 'Erro ao buscar funcionários', details: err });
@@ -201,6 +97,7 @@ app.get('/funcionarios', autenticarToken, async (req, res) => {
 app.post('/funcionarios', autenticarToken, async (req, res) => {
   try {
     const { nome, telefone, email, senha } = req.body;
+    if (!nome || !email || !senha) return res.status(400).json({ error: 'Nome, email e senha são obrigatórios' });
     const senhaHash = await bcrypt.hash(senha, 10);
     const [result] = await pool.query(
       'INSERT INTO funcionario (nome, telefone, email, senha) VALUES (?, ?, ?, ?)',
@@ -250,7 +147,7 @@ app.delete('/funcionarios/:id', autenticarToken, async (req, res) => {
   }
 });
 
-// CRUD CLIENTE
+// --- CRUD CLIENTE ---
 app.get('/clientes', autenticarToken, async (req, res) => {
   try {
     const [rows] = await pool.query('SELECT * FROM cliente');
@@ -263,6 +160,7 @@ app.get('/clientes', autenticarToken, async (req, res) => {
 app.post('/clientes', autenticarToken, async (req, res) => {
   try {
     const { nome, telefone } = req.body;
+    if (!nome) return res.status(400).json({ error: 'Nome é obrigatório' });
     const [result] = await pool.query(
       'INSERT INTO cliente (nome, telefone) VALUES (?, ?)',
       [nome, telefone]
@@ -305,6 +203,113 @@ app.delete('/clientes/:id', autenticarToken, async (req, res) => {
   }
 });
 
+// --- CRUD LOJA ---
+app.get('/lojas', autenticarToken, async (req, res) => {
+  try {
+    const [rows] = await pool.query(`
+      SELECT 
+        l.id, 
+        l.nome, 
+        c.nome AS cliente_nome,
+        c.id AS cliente_id,
+        f.nome AS funcionario_nome,
+        f.id AS funcionario_id,
+        l.anuncios_total, 
+        l.anuncios_realizados, 
+        l.anuncios_otimizados, 
+        l.visitas_semana, 
+        l.produto_mais_visitado, 
+        l.vendas_total
+      FROM loja l
+      JOIN cliente c ON l.cliente_id = c.id
+      JOIN funcionario f ON l.funcionario_id = f.id
+    `);
+    res.json(rows);
+  } catch (err) {
+    res.status(500).json({ error: 'Erro ao buscar lojas', details: err });
+  }
+});
+
+app.post('/lojas', autenticarToken, async (req, res) => {
+  try {
+    const {
+      funcionario_id,
+      cliente_id,
+      nome,
+      anuncios_total,
+      anuncios_realizados,
+      anuncios_otimizados,
+      visitas_semana,
+      produto_mais_visitado,
+      vendas_total
+    } = req.body;
+    if (!funcionario_id || !cliente_id || !nome) return res.status(400).json({ error: 'Campos obrigatórios não preenchidos' });
+    const [result] = await pool.query(
+      `INSERT INTO loja (funcionario_id, cliente_id, nome, anuncios_total, anuncios_realizados, anuncios_otimizados, visitas_semana, produto_mais_visitado, vendas_total)
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+      [funcionario_id, cliente_id, nome, anuncios_total, anuncios_realizados, anuncios_otimizados, visitas_semana, produto_mais_visitado, vendas_total]
+    );
+    res.status(201).json({ id: result.insertId, ...req.body });
+  } catch (err) {
+    res.status(500).json({ error: 'Erro ao criar loja', details: err });
+  }
+});
+
+app.put('/lojas/:id', autenticarToken, async (req, res) => {
+  try {
+    const id = parseInt(req.params.id, 10);
+    const {
+      funcionario_id,
+      cliente_id,
+      nome,
+      anuncios_total,
+      anuncios_realizados,
+      anuncios_otimizados,
+      visitas_semana,
+      produto_mais_visitado,
+      vendas_total
+    } = req.body;
+    const [result] = await pool.query(
+      `UPDATE loja SET funcionario_id=?, cliente_id=?, nome=?, anuncios_total=?, anuncios_realizados=?, anuncios_otimizados=?, visitas_semana=?, produto_mais_visitado=?, vendas_total=?
+       WHERE id=?`,
+      [funcionario_id, cliente_id, nome, anuncios_total, anuncios_realizados, anuncios_otimizados, visitas_semana, produto_mais_visitado, vendas_total, id]
+    );
+    if (result.affectedRows) {
+      res.json({ id, ...req.body });
+    } else {
+      res.status(404).json({ error: 'Loja não encontrada' });
+    }
+  } catch (err) {
+    res.status(500).json({ error: 'Erro ao atualizar loja', details: err });
+  }
+});
+
+app.delete('/lojas/:id', autenticarToken, async (req, res) => {
+  try {
+    const id = parseInt(req.params.id, 10);
+    const [result] = await pool.query('DELETE FROM loja WHERE id=?', [id]);
+    if (result.affectedRows) {
+      res.json({ success: true });
+    } else {
+      res.status(404).json({ error: 'Loja não encontrada' });
+    }
+  } catch (err) {
+    res.status(500).json({ error: 'Erro ao excluir loja', details: err });
+  }
+});
+
+// --- HEALTH CHECK ---
+app.get('/health', (req, res) => {
+  res.json({ status: 'ok', timestamp: new Date() });
+});
+
+// --- ERROR HANDLER ---
+app.use((err, req, res, next) => {
+  console.error('Erro não tratado:', err);
+  res.status(500).json({ error: 'Erro interno do servidor' });
+});
+
+// --- START SERVER ---
 app.listen(PORT, () => {
   console.log(`Servidor rodando na porta ${PORT}`);
 });

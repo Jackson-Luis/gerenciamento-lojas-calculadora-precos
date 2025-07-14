@@ -52,8 +52,8 @@ import { ref, onMounted } from "vue";
 import { BTable } from "bootstrap-vue-next";
 import { saveAs } from "file-saver";
 import ExcelJS from "exceljs";
-
 import { API_URL } from '../api';
+import { authFetch, getCurrentUser } from '../api/authFetch';
 
 const fields = [
   { key: "funcionario_nome", label: "Funcionário" },
@@ -86,38 +86,36 @@ const loading = ref(true);
 async function carregarLojas() {
   loading.value = true;
   try {
-    let headers: Record<string, string> = {};
     const token = localStorage.getItem('token');
-    // Para login de homologação, simula resposta sem acessar o backend protegido
     if (token === 'homolog-token') {
-      // Simule dados fake ou deixe vazio
       lojas.value = [];
       loading.value = false;
       return;
     }
-    if (token) {
-      headers['Authorization'] = 'Bearer ' + token;
+    const user = getCurrentUser();
+    let url = `${API_URL}/lojas`;
+    // Se não for admin, filtra por funcionário
+    if (user && user.id && user.id !== 0) {
+      url += `?funcionario_id=${user.id}`;
     }
-    const resp = await fetch(`${API_URL}/lojas`, {
-      headers
-    });
-    lojas.value = await resp.json();
+    const resp = await authFetch(url);
+    let data = await resp.json();
+    // Se não for admin, filtra no frontend também
+    if (user && user.id && user.id !== 0) {
+      data = data.filter((l: any) => l.funcionario_id === user.id);
+    }
+    lojas.value = data;
   } finally {
     loading.value = false;
   }
 }
 
 async function atualizarLoja(loja: Loja) {
-  let headers: Record<string, string> = { "Content-Type": "application/json" };
   const token = localStorage.getItem('token');
-  if (token && token !== 'homolog-token') {
-    headers['Authorization'] = 'Bearer ' + token;
-  }
-  // Não faz nada se for homologação
   if (token === 'homolog-token') return;
-  await fetch(`${API_URL}/lojas/${loja.id}`, {
+  await authFetch(`${API_URL}/lojas/${loja.id}`, {
     method: "PUT",
-    headers,
+    headers: { "Content-Type": "application/json" },
     body: JSON.stringify(loja)
   });
 }

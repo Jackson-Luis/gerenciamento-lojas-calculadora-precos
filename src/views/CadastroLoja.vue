@@ -89,6 +89,7 @@
 <script setup lang="ts">
 import { ref, onMounted } from 'vue'
 import { API_URL } from '../api'
+import { authFetch, getCurrentUser } from '../api/authFetch'
 
 interface Loja {
   id?: number
@@ -132,25 +133,36 @@ const form = ref<Loja>({
 const mostrarForm = ref(false)
 
 async function carregar() {
+  const user = getCurrentUser();
+  let lojasUrl = `${API_URL}/lojas`;
+  // Se não for admin, filtra por funcionário
+  if (user && user.id && user.id !== 0) {
+    lojasUrl += `?funcionario_id=${user.id}`;
+  }
   const [lojasResp, funcsResp, clientesResp] = await Promise.all([
-    fetch(`${API_URL}/lojas`),
-    fetch(`${API_URL}/funcionarios`),
-    fetch(`${API_URL}/clientes`)
+    authFetch(lojasUrl),
+    authFetch(`${API_URL}/funcionarios`),
+    authFetch(`${API_URL}/clientes`)
   ])
-  lojas.value = await lojasResp.json()
-  funcionarios.value = await funcsResp.json()
-  clientes.value = await clientesResp.json()
+  let lojasData = await lojasResp.json();
+  // Se não for admin, filtra no frontend também
+  if (user && user.id && user.id !== 0) {
+    lojasData = lojasData.filter((l: any) => l.funcionario_id === user.id);
+  }
+  lojas.value = lojasData;
+  funcionarios.value = await funcsResp.json();
+  clientes.value = await clientesResp.json();
 }
 
 async function salvar() {
   if (form.value.id) {
-    await fetch(`${API_URL}/lojas/${form.value.id}`, {
+    await authFetch(`${API_URL}/lojas/${form.value.id}`, {
       method: 'PUT',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(form.value)
     })
   } else {
-    await fetch(`${API_URL}/lojas`, {
+    await authFetch(`${API_URL}/lojas`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(form.value)
@@ -177,7 +189,7 @@ function cancelar() {
 
 async function excluir(id: number) {
   if (confirm('Excluir loja?')) {
-    await fetch(`${API_URL}/lojas/${id}`, { method: 'DELETE' })
+    await authFetch(`${API_URL}/lojas/${id}`, { method: 'DELETE' })
     await carregar()
   }
 }

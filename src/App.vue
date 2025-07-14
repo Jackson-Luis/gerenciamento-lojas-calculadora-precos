@@ -8,9 +8,11 @@
   <div v-else>
     <BCard v-b-color-mode="corAtual" class="border-0 rounded-0 min-vh-100 min-vw-100">
       <router-view />
+      <div v-if="route.path === '/calculadora-deslogada'">
       <br>
-      <div class="d-flex align-items-center justify-content-center" style="width: 100%;">
-        <BButton @click="acessarLogin" style="width: 200px;" variant="info">Acessar Login</BButton>
+        <div class="d-flex align-items-center justify-content-center" style="width: 100%;">
+          <BButton @click="acessarLogin" style="width: 200px;" variant="info">Acessar Login</BButton>
+        </div>
       </div>
     </BCard>
   </div>

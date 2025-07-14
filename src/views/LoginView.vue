@@ -75,6 +75,7 @@
 <script setup lang="ts">
 import router from "@/router";
 import { BFormInput, BButton } from "bootstrap-vue-next";
+import { API_URL } from '../api'
 import { ref, onMounted } from "vue";
 
 const email = ref("");
@@ -99,7 +100,7 @@ const login = async () => {
     return;
   }
   try {
-    const resp = await fetch('http://localhost:3001/login', {
+    const resp = await fetch(`${API_URL}/login`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ email: email.value, senha: senha.value })

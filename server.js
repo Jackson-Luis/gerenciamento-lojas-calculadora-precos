@@ -39,6 +39,19 @@ function autenticarToken(req, res, next) {
 // Rota de login usando tabela funcionario (com bcrypt)
 app.post('/login', async (req, res) => {
   const { email, senha } = req.body;
+
+  // Login de homologação apenas em ambiente de desenvolvimento
+  if (
+    process.env.NODE_ENV !== 'production' &&
+    email === 'admin@email.com' &&
+    senha === 'admin'
+  ) {
+    // Simula um usuário admin
+    const user = { id: 0, nome: 'Admin', email: 'admin@email.com' };
+    const token = jwt.sign(user, SECRET, { expiresIn: '1h' });
+    return res.json({ token, user });
+  }
+
   try {
     const [rows] = await pool.query(
       'SELECT id, nome, email, senha FROM funcionario WHERE email = ? LIMIT 1',

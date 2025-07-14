@@ -8,7 +8,13 @@ const app = express();
 const PORT = 3001;
 const SECRET = process.env.JWT_SECRET || 'segredo_super_secreto';
 
-app.use(cors());
+// CORS config: permite credenciais e qualquer origem em dev
+app.use(cors({
+  origin: (origin, callback) => callback(null, true),
+  credentials: true,
+  methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
+  allowedHeaders: ['Content-Type', 'Authorization']
+}));
 app.use(express.json());
 
 // Configuração da conexão MySQL
@@ -35,10 +41,10 @@ function autenticarToken(req, res, next) {
     req.user = { id: 0, nome: 'Admin', email: 'admin@email.com' };
     return next();
   }
-  // if (!token) return res.status(401).json({ error: 'Token não fornecido' });
+  if (!token) return res.status(401).json({ error: 'Token não fornecido' });
 
   jwt.verify(token, SECRET, (err, user) => {
-    // if (err) return res.status(403).json({ error: 'Token inválido' });
+    if (err) return res.status(403).json({ error: 'Token inválido' });
     req.user = user;
     next();
   });
@@ -67,11 +73,14 @@ app.post('/login', async (req, res) => {
     );
     if (rows.length > 0) {
       const funcionario = rows[0];
-      const senhaCorreta = await bcrypt.compare(senha, funcionario.senha);
-      if (senhaCorreta) {
-        const user = { id: funcionario.id, nome: funcionario.nome, email: funcionario.email };
-        const token = jwt.sign(user, SECRET, { expiresIn: '1h' });
-        return res.json({ token, user });
+      // Garante que senha e funcionario.senha existem e são strings
+      if (typeof senha === 'string' && typeof funcionario.senha === 'string') {
+        const senhaCorreta = await bcrypt.compare(senha, funcionario.senha);
+        if (senhaCorreta) {
+          const user = { id: funcionario.id, nome: funcionario.nome, email: funcionario.email };
+          const token = jwt.sign(user, SECRET, { expiresIn: '1h' });
+          return res.json({ token, user });
+        }
       }
     }
     res.status(401).json({ error: 'Credenciais inválidas' });
@@ -179,8 +188,8 @@ app.delete('/lojas/:id', autenticarToken, async (req, res) => {
   }
 });
 
-// CRUD FUNCIONARIO
-app.get('/funcionarios', async (req, res) => {
+// CRUD FUNCIONARIO (proteja todas as rotas exceto login)
+app.get('/funcionarios', autenticarToken, async (req, res) => {
   try {
     const [rows] = await pool.query('SELECT * FROM funcionario');
     res.json(rows);
@@ -189,7 +198,7 @@ app.get('/funcionarios', async (req, res) => {
   }
 });
 
-app.post('/funcionarios', async (req, res) => {
+app.post('/funcionarios', autenticarToken, async (req, res) => {
   try {
     const { nome, telefone, email, senha } = req.body;
     const senhaHash = await bcrypt.hash(senha, 10);
@@ -203,7 +212,7 @@ app.post('/funcionarios', async (req, res) => {
   }
 });
 
-app.put('/funcionarios/:id', async (req, res) => {
+app.put('/funcionarios/:id', autenticarToken, async (req, res) => {
   try {
     const id = parseInt(req.params.id, 10);
     const { nome, telefone, email, senha } = req.body;
@@ -227,7 +236,7 @@ app.put('/funcionarios/:id', async (req, res) => {
   }
 });
 
-app.delete('/funcionarios/:id', async (req, res) => {
+app.delete('/funcionarios/:id', autenticarToken, async (req, res) => {
   try {
     const id = parseInt(req.params.id, 10);
     const [result] = await pool.query('DELETE FROM funcionario WHERE id=?', [id]);

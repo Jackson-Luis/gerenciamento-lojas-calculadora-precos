@@ -19,7 +19,7 @@ export async function authFetch(input: RequestInfo, init: RequestInit = {}) {
 /**
  * Retorna o usuário logado (objeto salvo no localStorage após login)
  */
-export function getCurrentUser(): { id: number, nome: string, email: string } | null {
+export function getCurrentUser(): { id: number, nome: string, email: string, cargo_superior: boolean } | null {
   const user = localStorage.getItem('user');
   if (!user) return null;
   try {

@@ -89,6 +89,8 @@ function checkMobile() {
 onMounted(() => {
   checkMobile();
   window.addEventListener("resize", checkMobile);
+  localStorage.removeItem("token");
+  localStorage.removeItem("user");
 });
 
 const login = async () => {

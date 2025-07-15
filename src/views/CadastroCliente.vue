@@ -40,13 +40,20 @@
         </tr>
       </tbody>
     </table>
+    <BModal v-model="showConfirmModal" title="Confirmar exclusão" ok-title="Excluir" cancel-title="Cancelar" @ok="confirmarExclusao">
+      Tem certeza que deseja excluir este cliente?
+    </BModal>
+    <ToastAlert :message="toastMsg" :type="toastType" />
   </div>
 </template>
 
 <script setup lang="ts">
 import { ref, onMounted } from 'vue'
 import { API_URL } from '../api'
-import { authFetch } from '../api/authFetch'
+import { authFetch, getCurrentUser } from '../api/authFetch'
+import { BModal } from 'bootstrap-vue-next'
+import ToastAlert from '../components/ToastAlert.vue'
+import { useToastAlert } from '../composables/useToastAlert'
 
 interface Cliente {
   id?: number
@@ -57,28 +64,31 @@ interface Cliente {
 const clientes = ref<Cliente[]>([])
 const form = ref<Cliente>({ nome: '', telefone: '' })
 const mostrarForm = ref(false)
+const showConfirmModal = ref(false)
+const idParaExcluir = ref<number | null>(null)
+
+const { toastMsg, toastType, showToast } = useToastAlert()
 
 async function carregar() {
-  const resp = await authFetch(`${API_URL}/clientes`)
-  clientes.value = await resp.json()
+  const resp = await authFetch(`${API_URL}/clientes`);
+  clientes.value = await resp.json();
 }
 
 async function salvar() {
+  let url = `${API_URL}/clientes`;
+  let method = 'POST';
   if (form.value.id) {
-    await authFetch(`${API_URL}/clientes/${form.value.id}`, {
-      method: 'PUT',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(form.value)
-    })
-  } else {
-    await authFetch(`${API_URL}/clientes`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(form.value)
-    })
+    url = `${API_URL}/clientes/${form.value.id}`;
+    method = 'PUT';
   }
-  limpar()
-  await carregar()
+  await authFetch(url, {
+    method,
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(form.value)
+  });
+  limpar();
+  await carregar();
+  showToast(form.value.id ? 'Cliente atualizado com sucesso!' : 'Cliente criado com sucesso!', 'success')
 }
 
 function novo() {
@@ -97,9 +107,17 @@ function cancelar() {
 }
 
 async function excluir(id: number) {
-  if (confirm('Excluir cliente?')) {
-    await authFetch(`${API_URL}/clientes/${id}`, { method: 'DELETE' })
-    await carregar()
+  idParaExcluir.value = id
+  showConfirmModal.value = true
+}
+
+async function confirmarExclusao() {
+  if (idParaExcluir.value !== null) {
+    await authFetch(`${API_URL}/clientes/${idParaExcluir.value}`, { method: 'DELETE' });
+    await carregar();
+    showToast('Cliente excluído com sucesso!', 'success')
+    showConfirmModal.value = false
+    idParaExcluir.value = null
   }
 }
 

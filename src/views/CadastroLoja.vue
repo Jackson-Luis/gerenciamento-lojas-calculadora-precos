@@ -83,6 +83,10 @@
         </tr>
       </tbody>
     </table>
+    <BModal v-model="showConfirmModal" title="Confirmar exclusão" ok-title="Excluir" cancel-title="Cancelar" @ok="confirmarExclusao">
+      Tem certeza que deseja excluir esta loja?
+    </BModal>
+    <ToastAlert :message="toastMsg" :type="toastType" />
   </div>
 </template>
 
@@ -90,6 +94,9 @@
 import { ref, onMounted } from 'vue'
 import { API_URL } from '../api'
 import { authFetch, getCurrentUser } from '../api/authFetch'
+import { BModal } from 'bootstrap-vue-next'
+import ToastAlert from '../components/ToastAlert.vue'
+import { useToastAlert } from '../composables/useToastAlert'
 
 interface Loja {
   id?: number
@@ -131,6 +138,10 @@ const form = ref<Loja>({
   vendas_total: 0
 })
 const mostrarForm = ref(false)
+const showConfirmModal = ref(false)
+const idParaExcluir = ref<number | null>(null)
+
+const { toastMsg, toastType, showToast } = useToastAlert()
 
 async function carregar() {
   const user = getCurrentUser();
@@ -154,22 +165,35 @@ async function carregar() {
   clientes.value = await clientesResp.json();
 }
 
-async function salvar() {
-  if (form.value.id) {
-    await authFetch(`${API_URL}/lojas/${form.value.id}`, {
-      method: 'PUT',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(form.value)
-    })
-  } else {
-    await authFetch(`${API_URL}/lojas`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(form.value)
-    })
+async function confirmarExclusao() {
+  if (idParaExcluir.value !== null) {
+    await authFetch(`${API_URL}/lojas/${idParaExcluir.value}`, { method: 'DELETE' });
+    await carregar();
+    showToast('Loja excluída com sucesso!', 'success')
+    showConfirmModal.value = false
+    idParaExcluir.value = null
   }
-  cancelar()
-  await carregar()
+}
+
+async function salvar() {
+  const user = getCurrentUser();
+  if (user && user.id && user.id !== 0) {
+    form.value.funcionario_id = user.id;
+  }
+  let url = `${API_URL}/lojas`;
+  let method = 'POST';
+  if (form.value.id) {
+    url = `${API_URL}/lojas/${form.value.id}`;
+    method = 'PUT';
+  }
+  await authFetch(url, {
+    method,
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(form.value)
+  });
+  cancelar();
+  await carregar();
+  showToast(form.value.id ? 'Loja atualizada com sucesso!' : 'Loja criada com sucesso!', 'success')
 }
 
 function novo() {
@@ -188,10 +212,8 @@ function cancelar() {
 }
 
 async function excluir(id: number) {
-  if (confirm('Excluir loja?')) {
-    await authFetch(`${API_URL}/lojas/${id}`, { method: 'DELETE' })
-    await carregar()
-  }
+  idParaExcluir.value = id
+  showConfirmModal.value = true
 }
 
 function limpar() {

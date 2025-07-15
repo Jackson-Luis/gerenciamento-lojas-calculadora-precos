@@ -24,6 +24,9 @@
           maxlength="15"
         />
       </div>
+      <div class="mb-2">
+        <BFormCheckbox switch v-model="form.cargo_superior">Cargo Superior</BFormCheckbox>
+      </div>
       <button class="btn btn-success" type="submit">{{ form.id ? 'Atualizar' : 'Adicionar' }}</button>
       <button class="btn btn-secondary ms-2" type="button" @click="cancelar">Cancelar</button>
     </form>
@@ -50,13 +53,20 @@
         </tr>
       </tbody>
     </table>
+    <BModal v-model="showConfirmModal" title="Confirmar exclusão" ok-title="Excluir" cancel-title="Cancelar" @ok="confirmarExclusao">
+      Tem certeza que deseja excluir este funcionário?
+    </BModal>
+    <ToastAlert :message="toastMsg" :type="toastType" />
   </div>
 </template>
 
 <script setup lang="ts">
 import { ref, onMounted } from 'vue'
 import { API_URL } from '../api'
-import { authFetch } from '../api/authFetch'
+import { authFetch, getCurrentUser } from '../api/authFetch'
+import { BModal, BFormCheckbox } from 'bootstrap-vue-next'
+import ToastAlert from '../components/ToastAlert.vue'
+import { useToastAlert } from '../composables/useToastAlert'
 
 interface Funcionario {
   id?: number
@@ -64,35 +74,50 @@ interface Funcionario {
   telefone: string
   email?: string
   senha?: string
+  cargo_superior?: boolean
 }
 
 const funcionarios = ref<Funcionario[]>([])
-const form = ref<Funcionario>({ nome: '', telefone: '' })
+const form = ref<Funcionario>({ nome: '', telefone: '', email: '', senha: '', cargo_superior: false }); 
 const mostrarForm = ref(false)
+const showConfirmModal = ref(false)
+const idParaExcluir = ref<number | null>(null)
+
+const { toastMsg, toastType, showToast } = useToastAlert()
 
 async function carregar() {
-  // Para homologação, pode simular dados aqui se desejar
-  const resp = await authFetch(`${API_URL}/funcionarios`)
-  funcionarios.value = await resp.json()
+  const resp = await authFetch(`${API_URL}/funcionarios`);
+  const rows = await resp.json();
+
+  funcionarios.value = rows.map((r: any) => ({
+    ...r,
+    cargo_superior: !!r.cargo_superior
+  }));
 }
 
 async function salvar() {
+  const payload = {
+    ...form.value,
+    cargo_superior: form.value.cargo_superior ? 1 : 0
+  };
+  const isAtualizar = !!form.value.id;
+  let url = `${API_URL}/funcionarios`;
+  let method = 'POST';
   if (form.value.id) {
-    await authFetch(`${API_URL}/funcionarios/${form.value.id}`, {
-      method: 'PUT',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(form.value)
-    });
-  } else {
-    await authFetch(`${API_URL}/funcionarios`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(form.value)
-    });
+    url = `${API_URL}/funcionarios/${form.value.id}`;
+    method = 'PUT';
   }
+  await authFetch(url, {
+    method,
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(payload)
+  });
+
   cancelar();
   await carregar();
+  showToast(isAtualizar ? 'Funcionário atualizado com sucesso!' : 'Funcionário criado com sucesso!', 'success');
 }
+
 
 function novo() {
   limpar()
@@ -110,14 +135,22 @@ function cancelar() {
 }
 
 async function excluir(id: number) {
-  if (confirm('Excluir funcionário?')) {
-    await authFetch(`${API_URL}/funcionarios/${id}`, { method: 'DELETE' })
-    await carregar()
+  idParaExcluir.value = id
+  showConfirmModal.value = true
+}
+
+async function confirmarExclusao() {
+  if (idParaExcluir.value !== null) {
+    await authFetch(`${API_URL}/funcionarios/${idParaExcluir.value}`, { method: 'DELETE' });
+    await carregar();
+    showToast('Funcionário excluído com sucesso!', 'success')
+    showConfirmModal.value = false
+    idParaExcluir.value = null
   }
 }
 
 function limpar() {
-  form.value = { nome: '', telefone: '', email: '', senha: '' }
+  form.value = { nome: '', telefone: '', email: '', senha: '', cargo_superior: false }
 }
 
 function maskTelefone(e: Event) {

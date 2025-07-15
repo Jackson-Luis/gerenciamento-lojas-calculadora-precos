@@ -6,19 +6,27 @@
     />
     <BCollapse id="nav-collapse" is-nav :visible="collapseVisible">
       <BNavbarNav class="w-100 justify-content-around">
-        <BNavItem to="/cadastro-funcionario" tag="router-link"
+        <BNavItem v-if="isAdmin" to="/cadastro-funcionario" tag="router-link"
           >Funcionários</BNavItem>
-        <BNavItem to="/cadastro-cliente" tag="router-link">Clientes</BNavItem>
+        <BNavItem v-if="isAdmin" to="/cadastro-cliente" tag="router-link">Clientes</BNavItem>
         <BNavItem to="/cadastro-loja" tag="router-link">Lojas</BNavItem>
         <BNavItem to="/relatorio" tag="router-link">Relatório</BNavItem>
         <BNavItem to="/calculadora" tag="router-link">Calculadora</BNavItem>
+        <BNavItem
+          @click="emitChangeColor"
+          href="javascript:void(0)"
+        >
+          Modo {{ corAtual == "dark" ? "Escuro" : "Claro" }}
+        </BNavItem>
+        <BNavItem @click="sair" to="/login" tag="router-link">Sair</BNavItem>
       </BNavbarNav>
     </BCollapse>
   </BNavbar>
 </template>
 
 <script setup lang="ts">
-import { defineProps, defineEmits } from "vue";
+import { defineProps, defineEmits, onMounted } from "vue";
+import { authFetch, getCurrentUser } from '../api/authFetch';
 import {
   vBColorMode,
   BNavbar,
@@ -40,4 +48,21 @@ function emitChangeColor() {
 }
 
 const collapseVisible = ref(false);
+onMounted(() => {
+  const user = getCurrentUser();
+  console.log(user);
+});
+const isAdmin = ref(false);
+onMounted(async () => {
+  const user = getCurrentUser();
+  if (user && user.cargo_superior == true) {
+    isAdmin.value = true;
+  } else {
+    isAdmin.value = false;
+  }
+});
+function sair() {
+  localStorage.removeItem("token");
+  localStorage.removeItem("user");
+}
 </script>

@@ -9,8 +9,7 @@ import Login from '../views/LoginView.vue'
 const routes: Array<RouteRecordRaw> = [
   {
     path: '/',
-    redirect: '/login',
-    name: 'login'
+    redirect: '/login'
   },
   {
     path: '/login',

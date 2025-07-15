@@ -33,14 +33,6 @@ const pool = mysql.createPool({
 function autenticarToken(req, res, next) {
   const authHeader = req.headers['authorization'];
   const token = authHeader && authHeader.split(' ')[1];
-  // Homologation/dev bypass
-  if (
-    process.env.NODE_ENV !== 'production' &&
-    token === 'homolog-token'
-  ) {
-    req.user = { id: 0, nome: 'Admin', email: 'admin@email.com' };
-    return next();
-  }
   if (!token) return res.status(401).json({ error: 'Token não fornecido' });
   jwt.verify(token, SECRET, (err, user) => {
     if (err) return res.status(403).json({ error: 'Token inválido' });
@@ -52,19 +44,9 @@ function autenticarToken(req, res, next) {
 // --- LOGIN ---
 app.post('/login', async (req, res) => {
   const { email, senha } = req.body;
-  // Homologation/dev login
-  if (
-    process.env.NODE_ENV !== 'production' &&
-    email === 'admin@email.com' &&
-    senha === 'admin'
-  ) {
-    const user = { id: 0, nome: 'Admin', email: 'admin@email.com' };
-    const token = jwt.sign(user, SECRET, { expiresIn: '1h' });
-    return res.json({ token, user });
-  }
   try {
     const [rows] = await pool.query(
-      'SELECT id, nome, email, senha FROM funcionario WHERE email = ? LIMIT 1',
+      'SELECT id, nome, email, senha, cargo_superior FROM funcionario WHERE email = ? LIMIT 1',
       [email]
     );
     if (rows.length > 0) {
@@ -72,7 +54,7 @@ app.post('/login', async (req, res) => {
       if (typeof senha === 'string' && typeof funcionario.senha === 'string') {
         const senhaCorreta = await bcrypt.compare(senha, funcionario.senha);
         if (senhaCorreta) {
-          const user = { id: funcionario.id, nome: funcionario.nome, email: funcionario.email };
+          const user = { id: funcionario.id, nome: funcionario.nome, email: funcionario.email, cargo_superior: funcionario.cargo_superior };
           const token = jwt.sign(user, SECRET, { expiresIn: '1h' });
           return res.json({ token, user });
         }
@@ -87,7 +69,7 @@ app.post('/login', async (req, res) => {
 // --- CRUD FUNCIONARIO ---
 app.get('/funcionarios', autenticarToken, async (req, res) => {
   try {
-    const [rows] = await pool.query('SELECT id, nome, telefone, email FROM funcionario');
+    const [rows] = await pool.query('SELECT id, nome, telefone, email, cargo_superior FROM funcionario');
     res.json(rows);
   } catch (err) {
     res.status(500).json({ error: 'Erro ao buscar funcionários', details: err });
@@ -96,14 +78,14 @@ app.get('/funcionarios', autenticarToken, async (req, res) => {
 
 app.post('/funcionarios', autenticarToken, async (req, res) => {
   try {
-    const { nome, telefone, email, senha } = req.body;
+    const { nome, telefone, email, senha, cargo_superior } = req.body;
     if (!nome || !email || !senha) return res.status(400).json({ error: 'Nome, email e senha são obrigatórios' });
     const senhaHash = await bcrypt.hash(senha, 10);
     const [result] = await pool.query(
-      'INSERT INTO funcionario (nome, telefone, email, senha) VALUES (?, ?, ?, ?)',
-      [nome, telefone, email, senhaHash]
+      'INSERT INTO funcionario (nome, telefone, email, senha, cargo_superior) VALUES (?, ?, ?, ?, ?)',
+      [nome, telefone, email, senhaHash, cargo_superior]
     );
-    res.status(201).json({ id: result.insertId, nome, telefone, email });
+    res.status(201).json({ id: result.insertId, nome, telefone, email, cargo_superior });
   } catch (err) {
     res.status(500).json({ error: 'Erro ao criar funcionário', details: err });
   }
@@ -112,19 +94,19 @@ app.post('/funcionarios', autenticarToken, async (req, res) => {
 app.put('/funcionarios/:id', autenticarToken, async (req, res) => {
   try {
     const id = parseInt(req.params.id, 10);
-    const { nome, telefone, email, senha } = req.body;
+    const { nome, telefone, email, senha, cargo_superior } = req.body;
     let query, params;
     if (senha) {
       const senhaHash = await bcrypt.hash(senha, 10);
-      query = 'UPDATE funcionario SET nome=?, telefone=?, email=?, senha=? WHERE id=?';
-      params = [nome, telefone, email, senhaHash, id];
+      query = 'UPDATE funcionario SET nome=?, telefone=?, email=?, senha=?, cargo_superior=? WHERE id=?';
+      params = [nome, telefone, email, senhaHash, cargo_superior, id];
     } else {
-      query = 'UPDATE funcionario SET nome=?, telefone=?, email=? WHERE id=?';
-      params = [nome, telefone, email, id];
+      query = 'UPDATE funcionario SET nome=?, telefone=?, email=?, cargo_superior=? WHERE id=?';
+      params = [nome, telefone, email, cargo_superior, id];
     }
     const [result] = await pool.query(query, params);
     if (result.affectedRows) {
-      res.json({ id, nome, telefone, email });
+      res.json({ id, nome, telefone, email, cargo_superior });
     } else {
       res.status(404).json({ error: 'Funcionário não encontrado' });
     }
@@ -134,18 +116,38 @@ app.put('/funcionarios/:id', autenticarToken, async (req, res) => {
 });
 
 app.delete('/funcionarios/:id', autenticarToken, async (req, res) => {
+  const conn = await pool.getConnection();
   try {
     const id = parseInt(req.params.id, 10);
-    const [result] = await pool.query('DELETE FROM funcionario WHERE id=?', [id]);
+    await conn.beginTransaction();
+
+    // Desvincula o funcionário de todas as lojas
+    await conn.query(
+      'UPDATE loja SET funcionario_id = NULL WHERE funcionario_id = ?',
+      [id]
+    );
+
+    // Agora sim exclui o funcionário
+    const [result] = await conn.query(
+      'DELETE FROM funcionario WHERE id = ?',
+      [id]
+    );
+
+    await conn.commit();
+
     if (result.affectedRows) {
       res.json({ success: true });
     } else {
       res.status(404).json({ error: 'Funcionário não encontrado' });
     }
   } catch (err) {
+    await conn.rollback();
     res.status(500).json({ error: 'Erro ao excluir funcionário', details: err });
+  } finally {
+    conn.release();
   }
 });
+
 
 // --- CRUD CLIENTE ---
 app.get('/clientes', autenticarToken, async (req, res) => {
@@ -190,18 +192,46 @@ app.put('/clientes/:id', autenticarToken, async (req, res) => {
 });
 
 app.delete('/clientes/:id', autenticarToken, async (req, res) => {
+  const conn = await pool.getConnection();
   try {
     const id = parseInt(req.params.id, 10);
-    const [result] = await pool.query('DELETE FROM cliente WHERE id=?', [id]);
+    await conn.beginTransaction();
+
+    // 1. Desvincular funcionários das lojas do cliente
+    await conn.query(
+      `UPDATE loja SET funcionario_id = NULL WHERE cliente_id = ?`,
+      [id]
+    );
+
+    // 2. Excluir lojas do cliente
+    await conn.query(
+      `DELETE FROM loja WHERE cliente_id = ?`,
+      [id]
+    );
+
+    // 3. Excluir o cliente
+    const [result] = await conn.query(
+      `DELETE FROM cliente WHERE id = ?`,
+      [id]
+    );
+
+    await conn.commit();
+
     if (result.affectedRows) {
       res.json({ success: true });
     } else {
       res.status(404).json({ error: 'Cliente não encontrado' });
     }
   } catch (err) {
+    await conn.rollback();
+    console.error(err);
     res.status(500).json({ error: 'Erro ao excluir cliente', details: err });
+  } finally {
+    conn.release();
   }
 });
+
+
 
 // --- CRUD LOJA ---
 app.get('/lojas', autenticarToken, async (req, res) => {

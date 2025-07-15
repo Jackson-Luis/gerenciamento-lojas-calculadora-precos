@@ -7,26 +7,44 @@
     <BCollapse id="nav-collapse" is-nav :visible="collapseVisible">
       <BNavbarNav class="w-100 justify-content-around">
         <BNavItem v-if="isAdmin" to="/cadastro-funcionario" tag="router-link"
-          >Funcionários</BNavItem>
-        <BNavItem v-if="isAdmin" to="/cadastro-cliente" tag="router-link">Clientes</BNavItem>
-        <BNavItem to="/cadastro-loja" tag="router-link">Lojas</BNavItem>
+          >Funcionários</BNavItem
+        >
+        <BNavItem v-if="isAdmin" to="/cadastro-cliente" tag="router-link"
+          >Clientes</BNavItem
+        >
+        <BNavItem v-if="isAdmin" to="/cadastro-loja" tag="router-link"
+          >Lojas</BNavItem
+        >
+
         <BNavItem to="/relatorio" tag="router-link">Relatório</BNavItem>
         <BNavItem to="/calculadora" tag="router-link">Calculadora</BNavItem>
-        <BNavItem
-          @click="emitChangeColor"
-          href="javascript:void(0)"
-        >
+        <BNavItem @click="emitChangeColor" href="javascript:void(0)">
           Modo {{ corAtual == "dark" ? "Escuro" : "Claro" }}
         </BNavItem>
-        <BNavItem @click="sair" to="/login" tag="router-link">Sair</BNavItem>
+
+        <BNavItemDropdown>
+          <template #button-content>
+            <em>Config</em>
+          </template>
+          <BDropdownItem @click="openPasswordModal"
+            >Alterar senha</BDropdownItem
+          >
+          <BDropdownItem tag="router-link" to="/login" @click="logout"
+            >Sair</BDropdownItem
+          >
+        </BNavItemDropdown>
       </BNavbarNav>
     </BCollapse>
   </BNavbar>
+
+  <ModalSenha
+    v-model="showPasswordModal"
+    @success="showToast('Senha alterada com sucesso!', 'success')"
+  />
 </template>
 
 <script setup lang="ts">
-import { defineProps, defineEmits, onMounted } from "vue";
-import { authFetch, getCurrentUser } from '../api/authFetch';
+import { ref, onMounted, computed, defineEmits, defineProps } from "vue";
 import {
   vBColorMode,
   BNavbar,
@@ -34,35 +52,40 @@ import {
   BCollapse,
   BNavbarNav,
   BNavItem,
+  BNavItemDropdown,
+  BDropdownItem,
 } from "bootstrap-vue-next";
-import { ref } from "vue";
+import ModalSenha from "@/components/ModalSenha.vue";
+import { getCurrentUser } from "@/api/authFetch";
+import { useToastAlert } from "@/composables/useToastAlert";
 
 const props = defineProps<{ corAtual: "light" | "dark" }>();
-
 const emit = defineEmits<{
   (e: "update:corAtual", value: "light" | "dark"): void;
 }>();
+
+const collapseVisible = ref(false);
+const showPasswordModal = ref(false);
+const { showToast: toast } = useToastAlert();
+
+const currentUser = computed(() => getCurrentUser());
+const isAdmin = computed(() => !!currentUser.value?.cargo_superior);
 
 function emitChangeColor() {
   emit("update:corAtual", props.corAtual === "dark" ? "light" : "dark");
 }
 
-const collapseVisible = ref(false);
-onMounted(() => {
-  const user = getCurrentUser();
-  console.log(user);
-});
-const isAdmin = ref(false);
-onMounted(async () => {
-  const user = getCurrentUser();
-  if (user && user.cargo_superior == true) {
-    isAdmin.value = true;
-  } else {
-    isAdmin.value = false;
-  }
-});
-function sair() {
+function openPasswordModal() {
+  showPasswordModal.value = true;
+}
+
+function logout() {
   localStorage.removeItem("token");
   localStorage.removeItem("user");
 }
+
+// onMounted(() => {
+//   console.info('Usuário logado:', currentUser.value)
+// })
 </script>
+  

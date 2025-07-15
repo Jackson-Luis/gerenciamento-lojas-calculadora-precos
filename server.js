@@ -66,10 +66,45 @@ app.post('/login', async (req, res) => {
   }
 });
 
+// --- ALTERAR SENHA ---
+app.post('/alterar-senha', autenticarToken, async (req, res) => {
+  try {
+    const { novaSenha } = req.body;
+
+    if (novaSenha.length < 6) {
+      return res.status(400).json({ error: 'A nova senha deve ter pelo menos 6 caracteres' });
+    }
+
+    const id = req.user.id;
+
+    // 1. Busca a senha hash atual no banco
+    const [rows] = await pool.query(
+      'SELECT senha FROM funcionario WHERE id = ? LIMIT 1',
+      [id]
+    );
+    if (rows.length === 0) {
+      return res.status(404).json({ error: 'Usuário não encontrado' });
+    }
+
+    // 3. Gera hash da nova senha e atualiza
+    const novaHash = await bcrypt.hash(novaSenha, 10);
+    await pool.query(
+      'UPDATE funcionario SET senha = ? WHERE id = ?',
+      [novaHash, id]
+    );
+
+    return res.json({ success: true });
+  } catch (err) {
+    console.error('Erro em /alterar-senha:', err);
+    return res.status(500).json({ error: 'Erro ao alterar senha', details: err });
+  }
+});
+
+
 // --- CRUD FUNCIONARIO ---
 app.get('/funcionarios', autenticarToken, async (req, res) => {
   try {
-    const [rows] = await pool.query('SELECT id, nome, telefone, email, cargo_superior FROM funcionario');
+    const [rows] = await pool.query('SELECT id, nome, telefone, email, cargo_superior, valor_receber, data_receber_pagamento, chave_pix FROM funcionario');
     res.json(rows);
   } catch (err) {
     res.status(500).json({ error: 'Erro ao buscar funcionários', details: err });
@@ -78,14 +113,14 @@ app.get('/funcionarios', autenticarToken, async (req, res) => {
 
 app.post('/funcionarios', autenticarToken, async (req, res) => {
   try {
-    const { nome, telefone, email, senha, cargo_superior } = req.body;
+    const { nome, telefone, email, senha, cargo_superior, valor_receber, data_receber_pagamento, chave_pix } = req.body;
     if (!nome || !email || !senha) return res.status(400).json({ error: 'Nome, email e senha são obrigatórios' });
     const senhaHash = await bcrypt.hash(senha, 10);
     const [result] = await pool.query(
-      'INSERT INTO funcionario (nome, telefone, email, senha, cargo_superior) VALUES (?, ?, ?, ?, ?)',
-      [nome, telefone, email, senhaHash, cargo_superior]
+      'INSERT INTO funcionario (nome, telefone, email, senha, cargo_superior, valor_receber, data_receber_pagamento, chave_pix) VALUES (?, ?, ?, ?, ?, ?, ?, ?)',
+      [nome, telefone, email, senhaHash, cargo_superior, valor_receber, data_receber_pagamento, chave_pix]
     );
-    res.status(201).json({ id: result.insertId, nome, telefone, email, cargo_superior });
+    res.status(201).json({ id: result.insertId, nome, telefone, email, cargo_superior, valor_receber, data_receber_pagamento, chave_pix  });
   } catch (err) {
     res.status(500).json({ error: 'Erro ao criar funcionário', details: err });
   }
@@ -94,19 +129,19 @@ app.post('/funcionarios', autenticarToken, async (req, res) => {
 app.put('/funcionarios/:id', autenticarToken, async (req, res) => {
   try {
     const id = parseInt(req.params.id, 10);
-    const { nome, telefone, email, senha, cargo_superior } = req.body;
+    const { nome, telefone, email, senha, cargo_superior, valor_receber, data_receber_pagamento, chave_pix } = req.body;
     let query, params;
     if (senha) {
       const senhaHash = await bcrypt.hash(senha, 10);
-      query = 'UPDATE funcionario SET nome=?, telefone=?, email=?, senha=?, cargo_superior=? WHERE id=?';
-      params = [nome, telefone, email, senhaHash, cargo_superior, id];
+      query = 'UPDATE funcionario SET nome=?, telefone=?, email=?, senha=?, cargo_superior=?, valor_receber=?, data_receber_pagamento=?, chave_pix=? WHERE id=?';
+      params = [nome, telefone, email, senhaHash, cargo_superior, valor_receber, data_receber_pagamento, chave_pix, id];
     } else {
-      query = 'UPDATE funcionario SET nome=?, telefone=?, email=?, cargo_superior=? WHERE id=?';
-      params = [nome, telefone, email, cargo_superior, id];
+      query = 'UPDATE funcionario SET nome=?, telefone=?, email=?, cargo_superior=?, valor_receber=?, data_receber_pagamento=?, chave_pix=? WHERE id=?';
+      params = [nome, telefone, email, cargo_superior, valor_receber, data_receber_pagamento, chave_pix, id];
     }
     const [result] = await pool.query(query, params);
     if (result.affectedRows) {
-      res.json({ id, nome, telefone, email, cargo_superior });
+      res.json({ id, nome, telefone, email, cargo_superior, valor_receber, data_receber_pagamento, chave_pix });
     } else {
       res.status(404).json({ error: 'Funcionário não encontrado' });
     }

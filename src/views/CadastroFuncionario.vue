@@ -9,11 +9,22 @@
       </div>
       <div class="mb-2">
         <label>Email:</label>
-        <input v-model="form.email" class="form-control" type="email" required />
+        <input
+          v-model="form.email"
+          class="form-control"
+          type="email"
+          required
+        />
       </div>
       <div class="mb-2">
         <label>Senha:</label>
-        <input v-model="form.senha" class="form-control" type="password" :required="!form.id" autocomplete="new-password" />
+        <input
+          v-model="form.senha"
+          class="form-control"
+          type="password"
+          :required="!form.id"
+          autocomplete="new-password"
+        />
       </div>
       <div class="mb-2">
         <label>Telefone:</label>
@@ -25,10 +36,16 @@
         />
       </div>
       <div class="mb-2">
-        <BFormCheckbox switch v-model="form.cargo_superior">Cargo Superior</BFormCheckbox>
+        <BFormCheckbox switch v-model="form.cargo_superior"
+          >Cargo Superior</BFormCheckbox
+        >
       </div>
-      <button class="btn btn-success" type="submit">{{ form.id ? 'Atualizar' : 'Adicionar' }}</button>
-      <button class="btn btn-secondary ms-2" type="button" @click="cancelar">Cancelar</button>
+      <button class="btn btn-success" type="submit">
+        {{ form.id ? "Atualizar" : "Adicionar" }}
+      </button>
+      <button class="btn btn-secondary ms-2" type="button" @click="cancelar">
+        Cancelar
+      </button>
     </form>
     <hr />
     <h3>Funcionários</h3>
@@ -38,6 +55,9 @@
           <th>Nome</th>
           <th>Email</th>
           <th>Telefone</th>
+          <th>Data de Pagamento</th>
+          <th>Valor a Receber</th>
+          <th>Chave PIX</th>
           <th>Ações</th>
         </tr>
       </thead>
@@ -47,13 +67,46 @@
           <td>{{ f.email }}</td>
           <td>{{ f.telefone }}</td>
           <td>
-            <button class="btn btn-primary btn-sm" @click="editar(f)">Editar</button>
-            <button class="btn btn-danger btn-sm ms-2" @click="excluir(f.id)">Excluir</button>
+            <BFormInput
+              v-model="f.data_receber_pagamento"
+              type="date"
+              class="form-control"
+              @input="atualizarPagamento(f)"
+            />
+          </td>
+          <td>
+            <BInputGroup prepend="R$">
+              <BFormInput
+                v-model="f.valor_receber"
+                type="number"
+                class="form-control"
+                @input="atualizarPagamento(f)"
+              />
+            </BInputGroup>
+          </td>
+          <td>{{ f.chave_pix }}</td>
+          <td>
+            <BDropdown
+              size="lg"
+              variant="link"
+              toggle-class="text-decoration-none"
+              no-caret
+            >
+            <template #button-content>&#x2630;<span class="visually-hidden">Ações</span> </template>
+                <BDropdownItem @click="editar(f)">Editar</BDropdownItem>
+                <BDropdownItem @click="excluir(f.id)">Excluir</BDropdownItem>
+            </BDropdown>
           </td>
         </tr>
       </tbody>
     </table>
-    <BModal v-model="showConfirmModal" title="Confirmar exclusão" ok-title="Excluir" cancel-title="Cancelar" @ok="confirmarExclusao">
+    <BModal
+      v-model="showConfirmModal"
+      title="Confirmar exclusão"
+      ok-title="Excluir"
+      cancel-title="Cancelar"
+      @ok="confirmarExclusao"
+    >
       Tem certeza que deseja excluir este funcionário?
     </BModal>
     <ToastAlert :message="toastMsg" :type="toastType" />
@@ -61,111 +114,158 @@
 </template>
 
 <script setup lang="ts">
-import { ref, onMounted } from 'vue'
-import { API_URL } from '../api'
-import { authFetch, getCurrentUser } from '../api/authFetch'
-import { BModal, BFormCheckbox } from 'bootstrap-vue-next'
-import ToastAlert from '../components/ToastAlert.vue'
-import { useToastAlert } from '../composables/useToastAlert'
+import { ref, onMounted } from "vue";
+import { API_URL } from "../api";
+import { authFetch, getCurrentUser } from "../api/authFetch";
+import {
+  BModal,
+  BFormCheckbox,
+  BInputGroup,
+  BFormInput,
+  BDropdown,
+  BDropdownItem,
+} from "bootstrap-vue-next";
+import ToastAlert from "../components/ToastAlert.vue";
+import { useToastAlert } from "../composables/useToastAlert";
 
 interface Funcionario {
-  id?: number
-  nome: string
-  telefone: string
-  email?: string
-  senha?: string
-  cargo_superior?: boolean
+  id?: number;
+  nome: string;
+  telefone: string;
+  email?: string;
+  senha?: string;
+  cargo_superior?: boolean;
+  valor_receber?: number;
+  data_receber_pagamento?: string;
+  chave_pix?: string;
 }
 
-const funcionarios = ref<Funcionario[]>([])
-const form = ref<Funcionario>({ nome: '', telefone: '', email: '', senha: '', cargo_superior: false }); 
-const mostrarForm = ref(false)
-const showConfirmModal = ref(false)
-const idParaExcluir = ref<number | null>(null)
+const funcionarios = ref<Funcionario[]>([]);
+const form = ref<Funcionario>({
+  nome: "",
+  telefone: "",
+  email: "",
+  senha: "",
+  cargo_superior: false,
+  valor_receber: 0,
+  data_receber_pagamento: "",
+  chave_pix: "",
+});
+const mostrarForm = ref(false);
+const showConfirmModal = ref(false);
+const idParaExcluir = ref<number | null>(null);
 
-const { toastMsg, toastType, showToast } = useToastAlert()
+const { toastMsg, toastType, showToast } = useToastAlert();
 
 async function carregar() {
   const resp = await authFetch(`${API_URL}/funcionarios`);
   const rows = await resp.json();
-
+  console.log(rows);
   funcionarios.value = rows.map((r: any) => ({
     ...r,
-    cargo_superior: !!r.cargo_superior
+    cargo_superior: !!r.cargo_superior,
   }));
 }
 
 async function salvar() {
   const payload = {
     ...form.value,
-    cargo_superior: form.value.cargo_superior ? 1 : 0
+    cargo_superior: form.value.cargo_superior ? 1 : 0,
   };
   const isAtualizar = !!form.value.id;
   let url = `${API_URL}/funcionarios`;
-  let method = 'POST';
+  let method = "POST";
   if (form.value.id) {
     url = `${API_URL}/funcionarios/${form.value.id}`;
-    method = 'PUT';
+    method = "PUT";
   }
   await authFetch(url, {
     method,
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify(payload)
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(payload),
   });
 
   cancelar();
   await carregar();
-  showToast(isAtualizar ? 'Funcionário atualizado com sucesso!' : 'Funcionário criado com sucesso!', 'success');
+  showToast(
+    isAtualizar
+      ? "Funcionário atualizado com sucesso!"
+      : "Funcionário criado com sucesso!",
+    "success"
+  );
 }
 
-
 function novo() {
-  limpar()
-  mostrarForm.value = true
+  limpar();
+  mostrarForm.value = true;
 }
 
 function editar(f: Funcionario) {
-  form.value = { ...f }
-  mostrarForm.value = true
+  form.value = { ...f };
+  mostrarForm.value = true;
 }
 
 function cancelar() {
-  mostrarForm.value = false
-  limpar()
+  mostrarForm.value = false;
+  limpar();
 }
 
 async function excluir(id: number) {
-  idParaExcluir.value = id
-  showConfirmModal.value = true
+  idParaExcluir.value = id;
+  showConfirmModal.value = true;
 }
 
 async function confirmarExclusao() {
   if (idParaExcluir.value !== null) {
-    await authFetch(`${API_URL}/funcionarios/${idParaExcluir.value}`, { method: 'DELETE' });
+    await authFetch(`${API_URL}/funcionarios/${idParaExcluir.value}`, {
+      method: "DELETE",
+    });
     await carregar();
-    showToast('Funcionário excluído com sucesso!', 'success')
-    showConfirmModal.value = false
-    idParaExcluir.value = null
+    showToast("Funcionário excluído com sucesso!", "success");
+    showConfirmModal.value = false;
+    idParaExcluir.value = null;
   }
 }
 
 function limpar() {
-  form.value = { nome: '', telefone: '', email: '', senha: '', cargo_superior: false }
+  form.value = {
+    nome: "",
+    telefone: "",
+    email: "",
+    senha: "",
+    cargo_superior: false,
+  };
 }
 
 function maskTelefone(e: Event) {
-  let v = (e.target as HTMLInputElement).value.replace(/\D/g, '')
-  if (v.length > 11) v = v.slice(0, 11)
+  let v = (e.target as HTMLInputElement).value.replace(/\D/g, "");
+  if (v.length > 11) v = v.slice(0, 11);
   if (v.length > 6) {
-    v = v.replace(/^(\d{2})(\d{5})(\d{0,4}).*/, '($1) $2-$3')
+    v = v.replace(/^(\d{2})(\d{5})(\d{0,4}).*/, "($1) $2-$3");
   } else if (v.length > 2) {
-    v = v.replace(/^(\d{2})(\d{0,5})/, '($1) $2')
+    v = v.replace(/^(\d{2})(\d{0,5})/, "($1) $2");
   } else {
-    v = v.replace(/^(\d*)/, '($1')
+    v = v.replace(/^(\d*)/, "($1");
   }
-  (e.target as HTMLInputElement).value = v
-  form.value.telefone = v
+  (e.target as HTMLInputElement).value = v;
+  form.value.telefone = v;
 }
 
-onMounted(carregar)
+async function atualizarPagamento(e: Funcionario) {
+  const atualizado = { ...e };
+  const payload = {
+    ...atualizado,
+    valor_receber: atualizado.valor_receber,
+    data_receber_pagamento: atualizado.data_receber_pagamento,
+  };
+  let url = `${API_URL}/funcionarios/${atualizado.id}`;
+  let method = "PUT";
+  await authFetch(url, {
+    method,
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(payload),
+  });
+}
+
+onMounted(carregar);
 </script>

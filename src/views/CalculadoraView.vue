@@ -41,7 +41,7 @@
                   size="sm"
                   class="mx-1"
                   variant="outline-secondary"
-                  @click="copiarValor(String(resultadoVarianteShopee))"
+                  @click="copiarValor(String(resultadoVarianteShopee.total))"
                   >📋</BButton
                 >
               </div>
@@ -59,7 +59,7 @@
                       size="sm"
                       class="mx-1"
                       variant="outline-secondary"
-                      @click="copiarValor(String(item))"
+                      @click="copiarValor(String(item.total))"
                       >📋</BButton
                     >
                   </template>
@@ -92,7 +92,7 @@
                   size="sm"
                   class="mx-1"
                   variant="outline-secondary"
-                  @click="copiarValor(String(resultadoVarianteAmazon))"
+                  @click="copiarValor(String(resultadoVarianteAmazon.total))"
                   >📋</BButton
                 >
               </div>
@@ -110,7 +110,7 @@
                       size="sm"
                       class="mx-1"
                       variant="outline-secondary"
-                      @click="copiarValor(String(item))"
+                      @click="copiarValor(String(item.total))"
                       >📋</BButton
                     >
                   </template>

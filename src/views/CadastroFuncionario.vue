@@ -27,6 +27,13 @@
         />
       </div>
       <div class="mb-2">
+        <label>Chave Pix:</label>
+        <input
+          v-model="form.chave_pix"
+          class="form-control"
+        />
+      </div>
+      <div class="mb-2">
         <label>Telefone:</label>
         <input
           v-model="form.telefone"
@@ -36,9 +43,7 @@
         />
       </div>
       <div class="mb-2">
-        <BFormCheckbox switch v-model="form.cargo_superior"
-          >Cargo Superior</BFormCheckbox
-        >
+        <BFormCheckbox switch v-model="form.cargo_superior">Cargo Superior</BFormCheckbox>
       </div>
       <button class="btn btn-success" type="submit">
         {{ form.id ? "Atualizar" : "Adicionar" }}
@@ -175,25 +180,37 @@ async function salvar() {
   const isAtualizar = !!form.value.id;
   let url = `${API_URL}/funcionarios`;
   let method = "POST";
-  if (form.value.id) {
+  if (isAtualizar) {
     url = `${API_URL}/funcionarios/${form.value.id}`;
     method = "PUT";
   }
-  await authFetch(url, {
-    method,
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify(payload),
-  });
 
-  cancelar();
-  await carregar();
-  showToast(
-    isAtualizar
-      ? "Funcionário atualizado com sucesso!"
-      : "Funcionário criado com sucesso!",
-    "success"
-  );
+  try {
+    const resp = await authFetch(url, {
+      method,
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(payload),
+    });
+
+    if (!resp.ok) {
+      const error = await resp.json();
+      showToast(error.error || 'Erro ao salvar funcionário', 'danger');
+      return;
+    }
+
+    cancelar();
+    await carregar();
+    showToast(
+      isAtualizar
+        ? "Funcionário atualizado com sucesso!"
+        : "Funcionário criado com sucesso!",
+      "success"
+    );
+  } catch (err) {
+    showToast("Erro de rede ao salvar funcionário", "danger");
+  }
 }
+
 
 function novo() {
   limpar();

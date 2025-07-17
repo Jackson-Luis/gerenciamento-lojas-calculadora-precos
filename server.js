@@ -115,21 +115,30 @@ app.post('/funcionarios', autenticarToken, async (req, res) => {
   try {
     const { nome, telefone, email, senha, cargo_superior, valor_receber, data_receber_pagamento, chave_pix } = req.body;
     if (!nome || !email || !senha) return res.status(400).json({ error: 'Nome, email e senha são obrigatórios' });
+
+    const [[usuarioExistente]] = await pool.query('SELECT id FROM funcionario WHERE email = ?', [email]);
+    if (usuarioExistente) return res.status(400).json({ error: 'Email já está em uso por outro funcionário.' });
+
     const senhaHash = await bcrypt.hash(senha, 10);
     const [result] = await pool.query(
       'INSERT INTO funcionario (nome, telefone, email, senha, cargo_superior, valor_receber, data_receber_pagamento, chave_pix) VALUES (?, ?, ?, ?, ?, ?, ?, ?)',
       [nome, telefone, email, senhaHash, cargo_superior, valor_receber, data_receber_pagamento, chave_pix]
     );
-    res.status(201).json({ id: result.insertId, nome, telefone, email, cargo_superior, valor_receber, data_receber_pagamento, chave_pix  });
+    res.status(201).json({ id: result.insertId, nome, telefone, email, cargo_superior, valor_receber, data_receber_pagamento, chave_pix });
   } catch (err) {
     res.status(500).json({ error: 'Erro ao criar funcionário', details: err });
   }
 });
 
+
 app.put('/funcionarios/:id', autenticarToken, async (req, res) => {
   try {
     const id = parseInt(req.params.id, 10);
     const { nome, telefone, email, senha, cargo_superior, valor_receber, data_receber_pagamento, chave_pix } = req.body;
+
+    const [[usuarioExistente]] = await pool.query('SELECT id FROM funcionario WHERE email = ? AND id != ?', [email, id]);
+    if (usuarioExistente) return res.status(400).json({ error: 'Email já está em uso por outro funcionário.' });
+
     let query, params;
     if (senha) {
       const senhaHash = await bcrypt.hash(senha, 10);
@@ -139,6 +148,7 @@ app.put('/funcionarios/:id', autenticarToken, async (req, res) => {
       query = 'UPDATE funcionario SET nome=?, telefone=?, email=?, cargo_superior=?, valor_receber=?, data_receber_pagamento=?, chave_pix=? WHERE id=?';
       params = [nome, telefone, email, cargo_superior, valor_receber, data_receber_pagamento, chave_pix, id];
     }
+
     const [result] = await pool.query(query, params);
     if (result.affectedRows) {
       res.json({ id, nome, telefone, email, cargo_superior, valor_receber, data_receber_pagamento, chave_pix });
@@ -149,6 +159,7 @@ app.put('/funcionarios/:id', autenticarToken, async (req, res) => {
     res.status(500).json({ error: 'Erro ao atualizar funcionário', details: err });
   }
 });
+
 
 app.delete('/funcionarios/:id', autenticarToken, async (req, res) => {
   const conn = await pool.getConnection();

@@ -8,25 +8,26 @@ const PORT = process.env.PORT;
 const SECRET = process.env.JWT_SECRET || 'segredo_super_secreto';
 
 // --- CORS CONFIG ---
-const cors = require("cors");
+const cors = require('cors');
 
+// Altere aqui para o domínio correto do seu front-end hospedado
 const allowedOrigins = [
-  'http://localhost:8080',
-  'https://gerenciamento-lojas-calculadora-precos.onrender.com', // substitua pela URL real do frontend
+  'https://jackson-luis.github.io',
+  'http://localhost:8080' // se quiser testar localmente
 ];
 
 app.use(cors({
   origin: function (origin, callback) {
-    // Permite requests sem Origin (como curl ou Postman)
-    if (!origin) return callback(null, true);
-    if (allowedOrigins.includes(origin)) {
-      return callback(null, true);
+    if (!origin || allowedOrigins.includes(origin)) {
+      callback(null, true);
     } else {
-      return callback(new Error('Not allowed by CORS'));
+      callback(new Error('Not allowed by CORS'));
     }
   },
   credentials: true
 }));
+
+app.use(express.json());
 
 
 // --- POSTGRES POOL ---

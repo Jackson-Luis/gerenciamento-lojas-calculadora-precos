@@ -35,29 +35,54 @@ function autenticarToken(req, res, next) {
   });
 }
 
+app.get('/test-db', async (req, res) => {
+  try {
+    const { rows } = await pool.query('SELECT NOW()');
+    res.json(rows);
+  } catch (err) {
+    res.status(500).json({ error: 'Erro na conexão', details: err.message });
+  }
+});
+
+
 // --- LOGIN ---
 app.post('/login', async (req, res) => {
   const { email, senha } = req.body;
+  console.log('Tentando login para:', email);
+  
   try {
     const { rows } = await pool.query(
       'SELECT id, nome, email, senha, cargo_superior FROM funcionario WHERE email = $1 LIMIT 1',
       [email]
     );
 
-    if (rows.length > 0) {
-      const funcionario = rows[0];
-      const senhaCorreta = await bcrypt.compare(senha, funcionario.senha);
-      if (senhaCorreta) {
-        const user = { id: funcionario.id, nome: funcionario.nome, email: funcionario.email, cargo_superior: funcionario.cargo_superior };
-        const token = jwt.sign(user, SECRET, { expiresIn: '1h' });
-        return res.json({ token, user });
-      }
+    if (rows.length === 0) {
+      return res.status(401).json({ error: 'Email não encontrado' });
     }
-    res.status(401).json({ error: 'Credenciais inválidas' });
+
+    const funcionario = rows[0];
+    const senhaCorreta = await bcrypt.compare(senha, funcionario.senha);
+    if (!senhaCorreta) {
+      return res.status(401).json({ error: 'Senha incorreta' });
+    }
+
+    const user = {
+      id: funcionario.id,
+      nome: funcionario.nome,
+      email: funcionario.email,
+      cargo_superior: funcionario.cargo_superior
+    };
+
+    const SECRET = process.env.JWT_SECRET || 'chave_muito_secreta';
+    const token = jwt.sign(user, SECRET, { expiresIn: '1h' });
+
+    return res.json({ token, user });
   } catch (err) {
-    res.status(500).json({ error: 'Erro ao autenticar', details: err.message });
+    console.error('Erro ao autenticar usuário:', err);
+    res.status(500).json({ error: 'Erro interno ao autenticar', details: err.message });
   }
 });
+
 
 // --- ALTERAR SENHA ---
 app.post('/alterar-senha', autenticarToken, async (req, res) => {

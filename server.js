@@ -1,9 +1,9 @@
 require('dotenv').config();
 const express = require('express');
 const cors = require('cors');
-const mysql = require('mysql2/promise');
 const jwt = require('jsonwebtoken');
 const bcrypt = require('bcrypt');
+const { Pool } = require('pg');
 const app = express();
 const PORT = process.env.PORT || 3001;
 const SECRET = process.env.JWT_SECRET || 'segredo_super_secreto';
@@ -17,16 +17,12 @@ app.use(cors({
 }));
 app.use(express.json());
 
-// --- MYSQL POOL ---
-const pool = mysql.createPool({
-  host: process.env.MYSQLHOST,
-  user: process.env.MYSQLUSER,
-  password: process.env.MYSQLPASSWORD,
-  database: process.env.MYSQLDATABASE,
-  port: Number(process.env.MYSQLPORT),
-  waitForConnections: true,
-  connectionLimit: 10,
-  queueLimit: 0
+// --- POSTGRES POOL ---
+const pool = new Pool({
+  connectionString: process.env.DATABASE_URL,
+  ssl: {
+    rejectUnauthorized: false
+  }
 });
 
 // --- AUTH MIDDLEWARE ---
@@ -45,8 +41,8 @@ function autenticarToken(req, res, next) {
 app.post('/login', async (req, res) => {
   const { email, senha } = req.body;
   try {
-    const [rows] = await pool.query(
-      'SELECT id, nome, email, senha, cargo_superior FROM funcionario WHERE email = ? LIMIT 1',
+    const { rows } = await pool.query(
+      'SELECT id, nome, email, senha, cargo_superior FROM funcionario WHERE email = $1 LIMIT 1',
       [email]
     );
     if (rows.length > 0) {
@@ -62,7 +58,7 @@ app.post('/login', async (req, res) => {
     }
     res.status(401).json({ error: 'Credenciais inválidas' });
   } catch (err) {
-    res.status(500).json({ error: 'Erro ao autenticar', details: err });
+    res.status(500).json({ error: 'Erro ao autenticar', details: err.message });
   }
 });
 
@@ -71,43 +67,40 @@ app.post('/alterar-senha', autenticarToken, async (req, res) => {
   try {
     const { novaSenha } = req.body;
 
-    if (novaSenha.length < 6) {
+    if (!novaSenha || novaSenha.length < 6) {
       return res.status(400).json({ error: 'A nova senha deve ter pelo menos 6 caracteres' });
     }
 
     const id = req.user.id;
 
-    // 1. Busca a senha hash atual no banco
-    const [rows] = await pool.query(
-      'SELECT senha FROM funcionario WHERE id = ? LIMIT 1',
+    const { rows } = await pool.query(
+      'SELECT senha FROM funcionario WHERE id = $1 LIMIT 1',
       [id]
     );
     if (rows.length === 0) {
       return res.status(404).json({ error: 'Usuário não encontrado' });
     }
 
-    // 3. Gera hash da nova senha e atualiza
     const novaHash = await bcrypt.hash(novaSenha, 10);
     await pool.query(
-      'UPDATE funcionario SET senha = ? WHERE id = ?',
+      'UPDATE funcionario SET senha = $1 WHERE id = $2',
       [novaHash, id]
     );
 
     return res.json({ success: true });
   } catch (err) {
     console.error('Erro em /alterar-senha:', err);
-    return res.status(500).json({ error: 'Erro ao alterar senha', details: err });
+    return res.status(500).json({ error: 'Erro ao alterar senha', details: err.message });
   }
 });
-
 
 // --- CRUD FUNCIONARIO ---
 app.get('/funcionarios', autenticarToken, async (req, res) => {
   try {
-    const [rows] = await pool.query('SELECT id, nome, telefone, email, cargo_superior, valor_receber, data_receber_pagamento, chave_pix FROM funcionario');
+    const { rows } = await pool.query('SELECT id, nome, telefone, email, cargo_superior, valor_receber, data_receber_pagamento, chave_pix FROM funcionario');
     res.json(rows);
   } catch (err) {
-    res.status(500).json({ error: 'Erro ao buscar funcionários', details: err });
+    res.status(500).json({ error: 'Erro ao buscar funcionários', details: err.message });
   }
 });
 
@@ -116,92 +109,78 @@ app.post('/funcionarios', autenticarToken, async (req, res) => {
     const { nome, telefone, email, senha, cargo_superior, valor_receber, data_receber_pagamento, chave_pix } = req.body;
     if (!nome || !email || !senha) return res.status(400).json({ error: 'Nome, email e senha são obrigatórios' });
 
-    const [[usuarioExistente]] = await pool.query('SELECT id FROM funcionario WHERE email = ?', [email]);
-    if (usuarioExistente) return res.status(400).json({ error: 'Email já está em uso por outro funcionário.' });
+    const { rows: usuarios } = await pool.query('SELECT id FROM funcionario WHERE email = $1', [email]);
+    if (usuarios.length > 0) return res.status(400).json({ error: 'Email já está em uso por outro funcionário.' });
 
     const senhaHash = await bcrypt.hash(senha, 10);
-    const [result] = await pool.query(
-      'INSERT INTO funcionario (nome, telefone, email, senha, cargo_superior, valor_receber, data_receber_pagamento, chave_pix) VALUES (?, ?, ?, ?, ?, ?, ?, ?)',
+    const result = await pool.query(
+      'INSERT INTO funcionario (nome, telefone, email, senha, cargo_superior, valor_receber, data_receber_pagamento, chave_pix) VALUES ($1, $2, $3, $4, $5, $6, $7, $8) RETURNING id',
       [nome, telefone, email, senhaHash, cargo_superior, valor_receber, data_receber_pagamento, chave_pix]
     );
-    res.status(201).json({ id: result.insertId, nome, telefone, email, cargo_superior, valor_receber, data_receber_pagamento, chave_pix });
+    res.status(201).json({ id: result.rows[0].id, nome, telefone, email, cargo_superior, valor_receber, data_receber_pagamento, chave_pix });
   } catch (err) {
-    res.status(500).json({ error: 'Erro ao criar funcionário', details: err });
+    res.status(500).json({ error: 'Erro ao criar funcionário', details: err.message });
   }
 });
-
 
 app.put('/funcionarios/:id', autenticarToken, async (req, res) => {
   try {
     const id = parseInt(req.params.id, 10);
     const { nome, telefone, email, senha, cargo_superior, valor_receber, data_receber_pagamento, chave_pix } = req.body;
 
-    const [[usuarioExistente]] = await pool.query('SELECT id FROM funcionario WHERE email = ? AND id != ?', [email, id]);
-    if (usuarioExistente) return res.status(400).json({ error: 'Email já está em uso por outro funcionário.' });
+    const { rows: usuarios } = await pool.query('SELECT id FROM funcionario WHERE email = $1 AND id != $2', [email, id]);
+    if (usuarios.length > 0) return res.status(400).json({ error: 'Email já está em uso por outro funcionário.' });
 
-    let query, params;
     if (senha) {
       const senhaHash = await bcrypt.hash(senha, 10);
-      query = 'UPDATE funcionario SET nome=?, telefone=?, email=?, senha=?, cargo_superior=?, valor_receber=?, data_receber_pagamento=?, chave_pix=? WHERE id=?';
-      params = [nome, telefone, email, senhaHash, cargo_superior, valor_receber, data_receber_pagamento, chave_pix, id];
+      await pool.query(
+        'UPDATE funcionario SET nome=$1, telefone=$2, email=$3, senha=$4, cargo_superior=$5, valor_receber=$6, data_receber_pagamento=$7, chave_pix=$8 WHERE id=$9',
+        [nome, telefone, email, senhaHash, cargo_superior, valor_receber, data_receber_pagamento, chave_pix, id]
+      );
     } else {
-      query = 'UPDATE funcionario SET nome=?, telefone=?, email=?, cargo_superior=?, valor_receber=?, data_receber_pagamento=?, chave_pix=? WHERE id=?';
-      params = [nome, telefone, email, cargo_superior, valor_receber, data_receber_pagamento, chave_pix, id];
+      await pool.query(
+        'UPDATE funcionario SET nome=$1, telefone=$2, email=$3, cargo_superior=$4, valor_receber=$5, data_receber_pagamento=$6, chave_pix=$7 WHERE id=$8',
+        [nome, telefone, email, cargo_superior, valor_receber, data_receber_pagamento, chave_pix, id]
+      );
     }
 
-    const [result] = await pool.query(query, params);
-    if (result.affectedRows) {
-      res.json({ id, nome, telefone, email, cargo_superior, valor_receber, data_receber_pagamento, chave_pix });
-    } else {
-      res.status(404).json({ error: 'Funcionário não encontrado' });
-    }
+    res.json({ id, nome, telefone, email, cargo_superior, valor_receber, data_receber_pagamento, chave_pix });
   } catch (err) {
-    res.status(500).json({ error: 'Erro ao atualizar funcionário', details: err });
+    res.status(500).json({ error: 'Erro ao atualizar funcionário', details: err.message });
   }
 });
 
-
 app.delete('/funcionarios/:id', autenticarToken, async (req, res) => {
-  const conn = await pool.getConnection();
+  const client = await pool.connect();
   try {
     const id = parseInt(req.params.id, 10);
-    await conn.beginTransaction();
+    await client.query('BEGIN');
 
-    // Desvincula o funcionário de todas as lojas
-    await conn.query(
-      'UPDATE loja SET funcionario_id = NULL WHERE funcionario_id = ?',
-      [id]
-    );
+    await client.query('UPDATE loja SET funcionario_id = NULL WHERE funcionario_id = $1', [id]);
+    const result = await client.query('DELETE FROM funcionario WHERE id = $1', [id]);
 
-    // Agora sim exclui o funcionário
-    const [result] = await conn.query(
-      'DELETE FROM funcionario WHERE id = ?',
-      [id]
-    );
+    await client.query('COMMIT');
 
-    await conn.commit();
-
-    if (result.affectedRows) {
+    if (result.rowCount > 0) {
       res.json({ success: true });
     } else {
       res.status(404).json({ error: 'Funcionário não encontrado' });
     }
   } catch (err) {
-    await conn.rollback();
-    res.status(500).json({ error: 'Erro ao excluir funcionário', details: err });
+    await client.query('ROLLBACK');
+    res.status(500).json({ error: 'Erro ao excluir funcionário', details: err.message });
   } finally {
-    conn.release();
+    client.release();
   }
 });
-
 
 // --- CRUD CLIENTE ---
 app.get('/clientes', autenticarToken, async (req, res) => {
   try {
-    const [rows] = await pool.query('SELECT * FROM cliente');
+    const { rows } = await pool.query('SELECT * FROM cliente');
     res.json(rows);
   } catch (err) {
-    res.status(500).json({ error: 'Erro ao buscar clientes', details: err });
+    res.status(500).json({ error: 'Erro ao buscar clientes', details: err.message });
   }
 });
 
@@ -209,13 +188,10 @@ app.post('/clientes', autenticarToken, async (req, res) => {
   try {
     const { nome, telefone } = req.body;
     if (!nome) return res.status(400).json({ error: 'Nome é obrigatório' });
-    const [result] = await pool.query(
-      'INSERT INTO cliente (nome, telefone) VALUES (?, ?)',
-      [nome, telefone]
-    );
-    res.status(201).json({ id: result.insertId, nome, telefone });
+    const result = await pool.query('INSERT INTO cliente (nome, telefone) VALUES ($1, $2) RETURNING id', [nome, telefone]);
+    res.status(201).json({ id: result.rows[0].id, nome, telefone });
   } catch (err) {
-    res.status(500).json({ error: 'Erro ao criar cliente', details: err });
+    res.status(500).json({ error: 'Erro ao criar cliente', details: err.message });
   }
 });
 
@@ -223,66 +199,46 @@ app.put('/clientes/:id', autenticarToken, async (req, res) => {
   try {
     const id = parseInt(req.params.id, 10);
     const { nome, telefone } = req.body;
-    const [result] = await pool.query(
-      'UPDATE cliente SET nome=?, telefone=? WHERE id=?',
-      [nome, telefone, id]
-    );
-    if (result.affectedRows) {
+    const result = await pool.query('UPDATE cliente SET nome=$1, telefone=$2 WHERE id=$3', [nome, telefone, id]);
+    if (result.rowCount > 0) {
       res.json({ id, nome, telefone });
     } else {
       res.status(404).json({ error: 'Cliente não encontrado' });
     }
   } catch (err) {
-    res.status(500).json({ error: 'Erro ao atualizar cliente', details: err });
+    res.status(500).json({ error: 'Erro ao atualizar cliente', details: err.message });
   }
 });
 
 app.delete('/clientes/:id', autenticarToken, async (req, res) => {
-  const conn = await pool.getConnection();
+  const client = await pool.connect();
   try {
     const id = parseInt(req.params.id, 10);
-    await conn.beginTransaction();
+    await client.query('BEGIN');
 
-    // 1. Desvincular funcionários das lojas do cliente
-    await conn.query(
-      `UPDATE loja SET funcionario_id = NULL WHERE cliente_id = ?`,
-      [id]
-    );
+    await client.query('UPDATE loja SET funcionario_id = NULL WHERE cliente_id = $1', [id]);
+    await client.query('DELETE FROM loja WHERE cliente_id = $1', [id]);
+    const result = await client.query('DELETE FROM cliente WHERE id = $1', [id]);
 
-    // 2. Excluir lojas do cliente
-    await conn.query(
-      `DELETE FROM loja WHERE cliente_id = ?`,
-      [id]
-    );
+    await client.query('COMMIT');
 
-    // 3. Excluir o cliente
-    const [result] = await conn.query(
-      `DELETE FROM cliente WHERE id = ?`,
-      [id]
-    );
-
-    await conn.commit();
-
-    if (result.affectedRows) {
+    if (result.rowCount > 0) {
       res.json({ success: true });
     } else {
       res.status(404).json({ error: 'Cliente não encontrado' });
     }
   } catch (err) {
-    await conn.rollback();
-    console.error(err);
-    res.status(500).json({ error: 'Erro ao excluir cliente', details: err });
+    await client.query('ROLLBACK');
+    res.status(500).json({ error: 'Erro ao excluir cliente', details: err.message });
   } finally {
-    conn.release();
+    client.release();
   }
 });
-
-
 
 // --- CRUD LOJA ---
 app.get('/lojas', autenticarToken, async (req, res) => {
   try {
-    const [rows] = await pool.query(`
+    const { rows } = await pool.query(`
       SELECT 
         l.id, 
         l.nome, 
@@ -302,7 +258,7 @@ app.get('/lojas', autenticarToken, async (req, res) => {
     `);
     res.json(rows);
   } catch (err) {
-    res.status(500).json({ error: 'Erro ao buscar lojas', details: err });
+    res.status(500).json({ error: 'Erro ao buscar lojas', details: err.message });
   }
 });
 
@@ -320,14 +276,14 @@ app.post('/lojas', autenticarToken, async (req, res) => {
       vendas_total
     } = req.body;
     if (!funcionario_id || !cliente_id || !nome) return res.status(400).json({ error: 'Campos obrigatórios não preenchidos' });
-    const [result] = await pool.query(
+    const result = await pool.query(
       `INSERT INTO loja (funcionario_id, cliente_id, nome, anuncios_total, anuncios_realizados, anuncios_otimizados, visitas_semana, produto_mais_visitado, vendas_total)
-       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+       VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9) RETURNING id`,
       [funcionario_id, cliente_id, nome, anuncios_total, anuncios_realizados, anuncios_otimizados, visitas_semana, produto_mais_visitado, vendas_total]
     );
-    res.status(201).json({ id: result.insertId, ...req.body });
+    res.status(201).json({ id: result.rows[0].id, ...req.body });
   } catch (err) {
-    res.status(500).json({ error: 'Erro ao criar loja', details: err });
+    res.status(500).json({ error: 'Erro ao criar loja', details: err.message });
   }
 });
 
@@ -345,32 +301,32 @@ app.put('/lojas/:id', autenticarToken, async (req, res) => {
       produto_mais_visitado,
       vendas_total
     } = req.body;
-    const [result] = await pool.query(
-      `UPDATE loja SET funcionario_id=?, cliente_id=?, nome=?, anuncios_total=?, anuncios_realizados=?, anuncios_otimizados=?, visitas_semana=?, produto_mais_visitado=?, vendas_total=?
-       WHERE id=?`,
+    const result = await pool.query(
+      `UPDATE loja SET funcionario_id=$1, cliente_id=$2, nome=$3, anuncios_total=$4, anuncios_realizados=$5, anuncios_otimizados=$6, visitas_semana=$7, produto_mais_visitado=$8, vendas_total=$9
+       WHERE id=$10`,
       [funcionario_id, cliente_id, nome, anuncios_total, anuncios_realizados, anuncios_otimizados, visitas_semana, produto_mais_visitado, vendas_total, id]
     );
-    if (result.affectedRows) {
+    if (result.rowCount > 0) {
       res.json({ id, ...req.body });
     } else {
       res.status(404).json({ error: 'Loja não encontrada' });
     }
   } catch (err) {
-    res.status(500).json({ error: 'Erro ao atualizar loja', details: err });
+    res.status(500).json({ error: 'Erro ao atualizar loja', details: err.message });
   }
 });
 
 app.delete('/lojas/:id', autenticarToken, async (req, res) => {
   try {
     const id = parseInt(req.params.id, 10);
-    const [result] = await pool.query('DELETE FROM loja WHERE id=?', [id]);
-    if (result.affectedRows) {
+    const result = await pool.query('DELETE FROM loja WHERE id=$1', [id]);
+    if (result.rowCount > 0) {
       res.json({ success: true });
     } else {
       res.status(404).json({ error: 'Loja não encontrada' });
     }
   } catch (err) {
-    res.status(500).json({ error: 'Erro ao excluir loja', details: err });
+    res.status(500).json({ error: 'Erro ao excluir loja', details: err.message });
   }
 });
 

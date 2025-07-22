@@ -165,7 +165,6 @@ const { toastMsg, toastType, showToast } = useToastAlert();
 async function carregar() {
   const resp = await authFetch(`${API_URL}/funcionarios`);
   const rows = await resp.json();
-  console.log(rows);
   funcionarios.value = rows.map((r: any) => ({
     ...r,
     cargo_superior: !!r.cargo_superior,

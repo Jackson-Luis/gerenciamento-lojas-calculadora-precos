@@ -1,6 +1,5 @@
 require('dotenv').config();
 const express = require('express');
-const cors = require('cors');
 const jwt = require('jsonwebtoken');
 const bcrypt = require('bcrypt');
 const { Pool } = require('pg');
@@ -9,13 +8,26 @@ const PORT = process.env.PORT;
 const SECRET = process.env.JWT_SECRET || 'segredo_super_secreto';
 
 // --- CORS CONFIG ---
+const cors = require("cors");
+
+const allowedOrigins = [
+  'http://localhost:8080',
+  'https://gerenciamento-lojas-calculadora-precos.onrender.com', // substitua pela URL real do frontend
+];
+
 app.use(cors({
-  origin: (origin, callback) => callback(null, true),
-  credentials: true,
-  methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
-  allowedHeaders: ['Content-Type', 'Authorization']
+  origin: function (origin, callback) {
+    // Permite requests sem Origin (como curl ou Postman)
+    if (!origin) return callback(null, true);
+    if (allowedOrigins.includes(origin)) {
+      return callback(null, true);
+    } else {
+      return callback(new Error('Not allowed by CORS'));
+    }
+  },
+  credentials: true
 }));
-app.use(express.json());
+
 
 // --- POSTGRES POOL ---
 const pool = new Pool({

@@ -25,22 +25,22 @@
           {{ item.nome }}
         </template>
         <template #cell(anuncios_total)="{ item }">
-          <input type="number" v-model.number="item.anuncios_total" @blur="atualizarLoja(item)" class="form-control form-control-sm" />
+          <input type="number" min="0" v-model.number="item.anuncios_total" @blur="atualizarLoja(item)" class="form-control form-control-sm" />
         </template>
         <template #cell(anuncios_realizados)="{ item }">
-          <input type="number" v-model.number="item.anuncios_realizados" @blur="atualizarLoja(item)" class="form-control form-control-sm" />
+          <input type="number" min="0" v-model.number="item.anuncios_realizados" @blur="atualizarLoja(item)" class="form-control form-control-sm" />
         </template>
         <template #cell(anuncios_otimizados)="{ item }">
-          <input type="number" v-model.number="item.anuncios_otimizados" @blur="atualizarLoja(item)" class="form-control form-control-sm" />
+          <input type="number" min="0" v-model.number="item.anuncios_otimizados" @blur="atualizarLoja(item)" class="form-control form-control-sm" />
         </template>
         <template #cell(visitas_semana)="{ item }">
-          <input type="number" v-model.number="item.visitas_semana" @blur="atualizarLoja(item)" class="form-control form-control-sm" />
+          <input type="number" min="0" v-model.number="item.visitas_semana" @blur="atualizarLoja(item)" class="form-control form-control-sm" />
         </template>
         <template #cell(produto_mais_visitado)="{ item }">
           <input v-model="item.produto_mais_visitado" @blur="atualizarLoja(item)" class="form-control form-control-sm" />
         </template>
         <template #cell(vendas_total)="{ item }">
-          <input type="number" v-model.number="item.vendas_total" @blur="atualizarLoja(item)" class="form-control form-control-sm" />
+          <input type="number" min="0" v-model.number="item.vendas_total" @blur="atualizarLoja(item)" class="form-control form-control-sm" />
         </template>
       </BTable>
     </div>

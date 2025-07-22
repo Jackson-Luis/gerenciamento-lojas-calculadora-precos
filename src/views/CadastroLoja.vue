@@ -23,19 +23,19 @@
       </div>
       <div class="mb-2">
         <label>Anúncios Total:</label>
-        <input type="number" v-model.number="form.anuncios_total" class="form-control" />
+        <input type="number" min="0" v-model.number="form.anuncios_total" class="form-control" />
       </div>
       <div class="mb-2">
         <label>Anúncios Realizados:</label>
-        <input type="number" v-model.number="form.anuncios_realizados" class="form-control" />
+        <input type="number" min="0" v-model.number="form.anuncios_realizados" class="form-control" />
       </div>
       <div class="mb-2">
         <label>Anúncios Otimizados:</label>
-        <input type="number" v-model.number="form.anuncios_otimizados" class="form-control" />
+        <input type="number" min="0" v-model.number="form.anuncios_otimizados" class="form-control" />
       </div>
       <div class="mb-2">
         <label>Visitas Semana:</label>
-        <input type="number" v-model.number="form.visitas_semana" class="form-control" />
+        <input type="number" min="0" v-model.number="form.visitas_semana" class="form-control" />
       </div>
       <div class="mb-2">
         <label>Produto Mais Visitado:</label>
@@ -43,7 +43,7 @@
       </div>
       <div class="mb-2">
         <label>Vendas Total:</label>
-        <input type="number" v-model.number="form.vendas_total" class="form-control" />
+        <input type="number" min="0" v-model.number="form.vendas_total" class="form-control" />
       </div>
       <button class="btn btn-success" type="submit">{{ form.id ? 'Atualizar' : 'Adicionar' }}</button>
       <button class="btn btn-secondary ms-2" type="button" @click="cancelar">Cancelar</button>

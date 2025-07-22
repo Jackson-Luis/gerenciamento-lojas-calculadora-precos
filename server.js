@@ -5,7 +5,7 @@ const jwt = require('jsonwebtoken');
 const bcrypt = require('bcrypt');
 const { Pool } = require('pg');
 const app = express();
-const PORT = process.env.PORT || 3001;
+const PORT = process.env.PORT;
 const SECRET = process.env.JWT_SECRET || 'segredo_super_secreto';
 
 // --- CORS CONFIG ---

@@ -10,13 +10,14 @@ const transporter = nodemailer.createTransport({
   }
 })
 
-async function enviarEmail({ para, html }) {
+async function enviarEmail(para, html) {
   await transporter.sendMail({
     from: `"Sistema" <${process.env.EMAIL_USER}>`,
     to: para,
     subject: 'Recuperação de Senha',
     html
-  })
+  });
 }
+
 
 module.exports = { enviarEmail }

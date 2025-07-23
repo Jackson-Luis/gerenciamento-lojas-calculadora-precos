@@ -310,9 +310,9 @@ app.post('/api/cadastrar', async (req, res) => {
 })
 
 app.post('/enviar-email', async (req, res) => {
-  const { nome, email } = req.body
+  const { html, para } = req.body
 
-  await enviarEmail(email, nome)
+  await enviarEmail(para, html)
 
   res.json({ ok: true, message: 'E-mail enviado!' })
 })

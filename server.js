@@ -5,7 +5,7 @@ const cors = require('cors');
 const { Pool } = require('pg');
 const jwt = require('jsonwebtoken');
 const bcrypt = require('bcrypt');
-import { enviarEmailRSenha } from './service/emailService.js';
+import { enviarEmail } from './service/emailService.js';
 
 const app = express();
 const port = process.env.PORT || 3000;
@@ -300,7 +300,7 @@ app.delete('/lojas/:id', autenticarToken, async (req, res) => {
 app.post('/api/cadastrar', async (req, res) => {
   const { nome, email } = req.body
 
-  await enviarEmailRSenha(email, nome)
+  await enviarEmail(email, nome)
 
   res.json({ ok: true, message: 'Cadastro completo e e-mail enviado!' })
 })

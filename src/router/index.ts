@@ -5,6 +5,8 @@ import CadastroCliente from '../views/CadastroCliente.vue'
 import CadastroFuncionario from '../views/CadastroFuncionario.vue'
 import CadastroLoja from '../views/CadastroLoja.vue'
 import Login from '../views/LoginView.vue'
+import EmailRecuperarSenha from '../views/EmailRecuperarSenha.vue'
+import EmailCadastrarSenha from '../views/EmailCadastrarSenha.vue'
 
 const routes: Array<RouteRecordRaw> = [
   {
@@ -46,6 +48,16 @@ const routes: Array<RouteRecordRaw> = [
     name: 'cadastro-loja',
     component: CadastroLoja
   },
+  {
+    path: '/esqueci-senha',
+    name: 'esqueci-senha',
+    component: EmailRecuperarSenha
+  },
+  {
+    path: '/recuperar-senha',
+    name: 'recuperar-senha',
+    component: EmailCadastrarSenha
+  }
 ]
 
 const router = createRouter({

@@ -5,6 +5,7 @@
         v-model="valor"
         type="number"
         placeholder="Valor do produto em R$"
+        min="0"
       />
     </BInputGroup>
     <br />

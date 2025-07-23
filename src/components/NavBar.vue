@@ -44,7 +44,7 @@
 </template>
 
 <script setup lang="ts">
-import { ref, onMounted, computed, defineEmits, defineProps } from "vue";
+import { ref, computed, defineEmits, defineProps } from "vue";
 import {
   vBColorMode,
   BNavbar,
@@ -83,9 +83,5 @@ function logout() {
   localStorage.removeItem("token");
   localStorage.removeItem("user");
 }
-
-// onMounted(() => {
-//   console.info('Usuário logado:', currentUser.value)
-// })
 </script>
   

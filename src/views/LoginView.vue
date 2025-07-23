@@ -65,10 +65,12 @@
           <div class="d-grid gap-2">
             <BButton type="submit" variant="success" class="w-100">Login</BButton>
             <BButton @click="acessarCalculadora" class="w-100" variant="info">Acessar Calculadora</BButton>
+            <BButton @click="abrirModalRecSenha" class="w-100" variant="link">Esqueci minha senha</BButton>
           </div>
         </form>
       </div>
     </div>
+    <EmailRecuperarSenha :visivel="mostrar" @fechar="mostrar = false" />
   </div>
 </template>
 
@@ -77,9 +79,16 @@ import router from "@/router";
 import { BFormInput, BButton } from "bootstrap-vue-next";
 import { API_URL } from '../api'
 import { ref, onMounted } from "vue";
+import EmailRecuperarSenha from "@/views/EmailRecuperarSenha.vue";
 
 const email = ref("");
 const senha = ref("");
+
+const mostrar = ref(false)
+
+const abrirModalRecSenha = () => {
+  mostrar.value = true
+}
 
 // Responsivo: detecta se está em mobile
 const isMobile = ref(false);

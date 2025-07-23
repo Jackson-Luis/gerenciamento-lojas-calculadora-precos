@@ -1,13 +1,15 @@
 
-const express = require('express');
-const cors = require('cors');
-const { Pool } = require('pg');
-const jwt = require('jsonwebtoken');
-const bcrypt = require('bcrypt');
 import dotenv from 'dotenv';
+import express from 'express';
+import cors from 'cors';
+import pkg from 'pg';
+const { Pool } = pkg;
+import jwt from 'jsonwebtoken';
+import bcrypt from 'bcrypt';
 import { enviarEmail } from './service/emailService.js';
 
 dotenv.config();
+
 
 const app = express();
 const port = process.env.PORT || 3000;

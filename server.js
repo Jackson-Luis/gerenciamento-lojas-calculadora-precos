@@ -309,6 +309,14 @@ app.post('/api/cadastrar', async (req, res) => {
   res.json({ ok: true, message: 'Cadastro completo e e-mail enviado!' })
 })
 
+app.post('/enviar-email', async (req, res) => {
+  const { nome, email } = req.body
+
+  await enviarEmail(email, nome)
+
+  res.json({ ok: true, message: 'E-mail enviado!' })
+})
+
 app.get('/health', (req, res) => {
   res.json({ status: 'ok', timestamp: new Date() });
 });

@@ -60,8 +60,8 @@ const routes: Array<RouteRecordRaw> = [
     component: EmailCadastrarSenha
   },
   {
-    path: '/teste-ia',
-    name: 'teste-ia',
+    path: '/criacao-ia',
+    name: 'criacao-ia',
     component: TesteIA
   }
 ]

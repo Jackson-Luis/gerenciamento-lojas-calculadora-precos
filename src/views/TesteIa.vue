@@ -2,8 +2,8 @@
   <div class="container">
     <h2>Formulário com IA</h2>
 
-    <BInput v-model="prompt" placeholder="Digite seu prompt..." />
-
+    <BInput v-model="prompt" placeholder="Nome do produto" />
+    <br />
     <BButton @click="gerarCampos">Gerar Campos</BButton>
 
     <div v-if="loading">Aguarde, gerando...</div>
@@ -12,48 +12,169 @@
 
     <div v-if="palavras_chave">
       <h3>Palavras-chave</h3>
-      <BInput v-model="palavras_chave" placeholder="Palavras-chave" />
+      <BFormTextarea v-model="palavras_chave" placeholder="Palavras-chave" />
+      <span class="float-end" v-if="palavras_chave">
+        <BTooltip>
+          <template #target>
+            <BButton
+              size="sm"
+              class="mx-1"
+              variant="outline-secondary"
+              @click="copiarValor(String(palavras_chave))"
+              >📋</BButton
+            >
+          </template>
+          Copiar valor
+        </BTooltip>
+      </span>
     </div>
-
     <div v-if="titulos">
-      <h3>Títulos</h3>
-      <BInput v-model="titulos" placeholder="Títulos" />
+      <h3>Título</h3>
+      <BInput v-model="titulos" placeholder="Título" />
+      <span class="float-end" v-if="titulos">
+        <BTooltip>
+          <template #target>
+            <BButton
+              size="sm"
+              class="mx-1"
+              variant="outline-secondary"
+              @click="copiarValor(String(titulos))"
+              >📋</BButton
+            >
+          </template>
+          Copiar valor
+        </BTooltip>
+      </span>
     </div>
-
     <div v-if="descricoes">
-      <h3>Descrições</h3>
-      <BInput v-model="descricoes" placeholder="Descrições" />
+      <h3>Descrição</h3>
+      <BFormTextarea v-model="descricoes" placeholder="Descrição" />
+      <span class="float-end" v-if="descricoes">
+        <BTooltip>
+          <template #target>
+            <BButton
+              size="sm"
+              class="mx-1"
+              variant="outline-secondary"
+              @click="copiarValor(String(descricoes))"
+              >📋</BButton
+            >
+          </template>
+          Copiar valor
+        </BTooltip>
+      </span>
     </div>
-
-    <div v-if="bullet_points">
+    <div v-if="bullet_points.bulletpoint_um">
       <h3>Bullet Points</h3>
-      <BInput
-        v-model="bullet_points.bulletpoint_um"
-        placeholder="Bullet Point 1"
-      />
-      <BInput
-        v-model="bullet_points.bulletpoint_dois"
-        placeholder="Bullet Point 2"
-      />
-      <BInput   
-        v-model="bullet_points.bulletpoint_tres"
-        placeholder="Bullet Point 3"
-      />
-      <BInput
-        v-model="bullet_points.bulletpoint_quatro"
-        placeholder="Bullet Point 4"
-      />
-      <BInput
-        v-model="bullet_points.bulletpoint_cinco"
-        placeholder="Bullet Point 5"
-      />
+      <div class="row">
+        <div class="col-md-12">
+          <BInput
+            v-model="bullet_points.bulletpoint_um"
+            placeholder="Bullet Point 1"
+          />
+          <span class="float-end">
+            <BTooltip>
+              <template #target>
+                <BButton
+                  size="sm"
+                  class="mx-1"
+                  variant="outline-secondary"
+                  @click="copiarValor(String(bullet_points.bulletpoint_um))"
+                  >📋</BButton
+                >
+              </template>
+              Copiar valor
+            </BTooltip>
+          </span>
+        </div>
+        <div class="col-md-12">
+          <BInput
+            v-model="bullet_points.bulletpoint_dois"
+            placeholder="Bullet Point 2"
+          />
+          <span class="float-end">
+            <BTooltip>
+              <template #target>
+                <BButton
+                  size="sm"
+                  class="mx-1"
+                  variant="outline-secondary"
+                  @click="copiarValor(String(bullet_points.bulletpoint_dois))"
+                  >📋</BButton
+                >
+              </template>
+              Copiar valor
+            </BTooltip>
+          </span>
+        </div>
+        <div class="col-md-12">
+          <BInput
+            v-model="bullet_points.bulletpoint_tres"
+            placeholder="Bullet Point 3"
+          />
+          <span class="float-end">
+            <BTooltip>
+              <template #target>
+                <BButton
+                  size="sm"
+                  class="mx-1"
+                  variant="outline-secondary"
+                  @click="copiarValor(String(bullet_points.bulletpoint_tres))"
+                  >📋</BButton
+                >
+              </template>
+              Copiar valor
+            </BTooltip>
+          </span>
+        </div>
+        <div class="col-md-12">
+          <BInput
+            v-model="bullet_points.bulletpoint_quatro"
+            placeholder="Bullet Point 4"
+          />
+          <span class="float-end">
+            <BTooltip>
+              <template #target>
+                <BButton
+                  size="sm"
+                  class="mx-1"
+                  variant="outline-secondary"
+                  @click="copiarValor(String(bullet_points.bulletpoint_quatro))"
+                  >📋</BButton
+                >
+              </template>
+              Copiar valor
+            </BTooltip>
+          </span>
+        </div>
+        <div class="col-md-12">
+          <BInput
+            v-model="bullet_points.bulletpoint_cinco"
+            placeholder="Bullet Point 5"
+          />
+          <span class="float-end">
+            <BTooltip>
+              <template #target>
+                <BButton
+                  size="sm"
+                  class="mx-1"
+                  variant="outline-secondary"
+                  @click="copiarValor(String(bullet_points.bulletpoint_cinco))"
+                  >📋</BButton
+                >
+              </template>
+              Copiar valor
+            </BTooltip>
+          </span>
+        </div>
+      </div>
     </div>
   </div>
 </template>
 
-<script setup>
+<script setup lang="ts">
 import { ref } from "vue";
-import { BInput, BButton } from "bootstrap-vue-next";
+import { BInput, BButton, BTooltip, BFormTextarea } from "bootstrap-vue-next";
 
 const prompt = ref("");
 const palavras_chave = ref("");
@@ -68,6 +189,10 @@ const bullet_points = ref({
 });
 const loading = ref(false);
 const erro = ref(null);
+
+function copiarValor(val: string) {
+  if (val) navigator.clipboard.writeText(val);
+}
 
 const gerarCampos = async () => {
   erro.value = null;
@@ -88,15 +213,15 @@ const gerarCampos = async () => {
       titulos.value = data.titulos || "";
       descricoes.value = data.descricoes || "";
       bullet_points.value = {
-        bulletpoint_um: data.bullet_points.bulletpoint_um || "",
-        bulletpoint_dois: data.bullet_points.bulletpoint_dois || "",
-        bulletpoint_tres: data.bullet_points.bulletpoint_tres || "",
-        bulletpoint_quatro: data.bullet_points.bulletpoint_quatro || "",
-        bulletpoint_cinco: data.bullet_points.bulletpoint_cinco || "",
+        bulletpoint_um: data.bullet_points.bulletpoint_1 || "",
+        bulletpoint_dois: data.bullet_points.bulletpoint_2 || "",
+        bulletpoint_tres: data.bullet_points.bulletpoint_3 || "",
+        bulletpoint_quatro: data.bullet_points.bulletpoint_4 || "",
+        bulletpoint_cinco: data.bullet_points.bulletpoint_5 || "",
       };
     }
   } catch (e) {
-    erro.value = "Erro de conexão com o servidor.";
+    alert("Erro de conexão com o servidor.");
   } finally {
     loading.value = false;
   }

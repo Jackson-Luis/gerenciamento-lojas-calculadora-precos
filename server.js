@@ -342,7 +342,7 @@ app.post('/api/preencher', async (req, res) => {
           role: 'user',
           content: `Com base nesse prompt: produto ["${prompt}"]
                   tarefas:
-                  1. pesquise as 20 palavras chave mais relevantes na busca do produto e as cite espaçadas por (,)
+                  1. pesquise as 20 palavras chave mais relevantes na busca do produto e as cite espaçadas por (;)
                   2. crie um titulo para anuncios, utilizando apenas as palavras chave com o limite minimo de 130 caracteres cada
                   3. crie uma descrição com cerca de 120 palavras, lembre de ser convincente e incluir as especificações do produto
                   4. crie 5 bullet points sofisticados para cada anuncio
@@ -352,7 +352,7 @@ app.post('/api/preencher', async (req, res) => {
                   * Mantenha a formatação clara e organizada para facilitar a leitura e a aplicação das informações.
                   * gere em formato JSON, com os campos: "palavras_chave", "titulos", "descricoes", "bullet_points"
                   * dentro de bullet_points, deve ter 5 bullet points distintos no máximo
-                  * em bulletpoints deve ser também um objeto com cada como bulletpoint_um, e o valor como o bullet point e assim por diante`,
+                  * em bulletpoints deve ser também um objeto com cada como bulletpoint_1, e o valor como o bullet point e assim por diante`,
         },
       ],
     });

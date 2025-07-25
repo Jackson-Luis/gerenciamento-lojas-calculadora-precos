@@ -17,6 +17,9 @@
         >
 
         <BNavItem to="/relatorio" tag="router-link">Relatório</BNavItem>
+
+        <BNavItem to="/criacao-ia" tag="router-link">Criação com IA (Experimental incompleta)</BNavItem>
+        
         <BNavItem to="/calculadora" tag="router-link">Calculadora</BNavItem>
         <BNavItem @click="emitChangeColor" href="javascript:void(0)">
           Modo {{ corAtual == "dark" ? "Escuro" : "Claro" }}

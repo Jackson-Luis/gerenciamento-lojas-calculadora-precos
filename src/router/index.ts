@@ -7,6 +7,7 @@ import CadastroLoja from '../views/CadastroLoja.vue'
 import Login from '../views/LoginView.vue'
 import EmailRecuperarSenha from '../views/EmailRecuperarSenha.vue'
 import EmailCadastrarSenha from '../views/EmailCadastrarSenha.vue'
+import TesteIA from '../views/TesteIa.vue'
 
 const routes: Array<RouteRecordRaw> = [
   {
@@ -57,6 +58,11 @@ const routes: Array<RouteRecordRaw> = [
     path: '/recuperar-senha',
     name: 'recuperar-senha',
     component: EmailCadastrarSenha
+  },
+  {
+    path: '/teste-ia',
+    name: 'teste-ia',
+    component: TesteIA
   }
 ]
 

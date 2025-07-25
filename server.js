@@ -8,12 +8,16 @@ import jwt from 'jsonwebtoken';
 import bcrypt from 'bcrypt';
 import { enviarEmail } from './service/emailService.js';
 
+import OpenAI from 'openai';
 dotenv.config();
 
 
 const app = express();
-const port = process.env.PORT || 3000;
-const SECRET = process.env.JWT_SECRET || 'segredo';
+const port = process.env.PORT || 3001;
+const SECRET = process.env.JWT_SECRET;
+const openai = new OpenAI({
+  apiKey: process.env.OPENAI_API_KEY_TESTE,
+});
 
 const pool = new Pool({
   connectionString: process.env.DATABASE_URL,
@@ -54,7 +58,7 @@ app.get('/test-db', async (req, res) => {
 app.post('/login', async (req, res) => {
   const { email, senha } = req.body;
   console.log('Tentando login para:', email);
-  
+
   try {
     const { rows } = await pool.query(
       'SELECT id, nome, email, senha, cargo_superior FROM funcionario WHERE email = $1 LIMIT 1',
@@ -310,12 +314,63 @@ app.post('/api/cadastrar', async (req, res) => {
 })
 
 app.post('/enviar-email', async (req, res) => {
-  const { html, para } = req.body
+  try {
+    const { html, para } = req.body;
 
-  await enviarEmail(para, html)
+    if (!para || !html) {
+      return res.status(400).json({ ok: false, message: 'Parâmetros "para" e "html" são obrigatórios.' });
+    }
 
-  res.json({ ok: true, message: 'E-mail enviado!' })
-})
+    await enviarEmail(para, html);
+
+    res.json({ ok: true, message: 'E-mail enviado!' });
+  } catch (err) {
+    console.error('Erro ao enviar email:', err);
+    res.status(500).json({ ok: false, message: 'Erro ao enviar e-mail.' });
+  }
+});
+
+
+app.post('/api/preencher', async (req, res) => {
+  const { prompt } = req.body;
+
+  try {
+    const completion = await openai.chat.completions.create({
+      model: "gpt-4.1-nano-2025-04-14",
+      messages: [
+        {
+          role: 'user',
+          content: `Com base nesse prompt: produto ["${prompt}"]
+                  tarefas:
+                  1. pesquise as 20 palavras chave mais relevantes na busca do produto e as cite espaçadas por (,)
+                  2. crie um titulo para anuncios, utilizando apenas as palavras chave com o limite minimo de 130 caracteres cada
+                  3. crie uma descrição com cerca de 120 palavras, lembre de ser convincente e incluir as especificações do produto
+                  4. crie 5 bullet points sofisticados para cada anuncio
+                  observações
+                  * Utilize linguagem persuasiva e focada em SEO.
+                  * Adapte o tom de voz e a linguagem ao público-alvo do produto.
+                  * Mantenha a formatação clara e organizada para facilitar a leitura e a aplicação das informações.
+                  * gere em formato JSON, com os campos: "palavras_chave", "titulos", "descricoes", "bullet_points"
+                  * dentro de bullet_points, deve ter 5 bullet points distintos no máximo
+                  * em bulletpoints deve ser também um objeto com cada como bulletpoint_um, e o valor como o bullet point e assim por diante`,
+        },
+      ],
+    });
+
+    const texto = completion.choices[0].message.content;
+    const jsonLimpo = texto
+      .replace(/^```json\s*/i, '')
+      .replace(/```$/, '')
+      .trim();
+
+    const json = JSON.parse(jsonLimpo);
+    res.json(json);
+  } catch (err) {
+    console.error('Erro ao fazer parse do JSON:', err.message);
+    console.log('Conteúdo retornado:', completion.choices[0].message.content);
+    res.status(500).json({ error: 'Erro ao interpretar JSON retornado pela IA.' });
+  }
+});
 
 app.get('/health', (req, res) => {
   res.json({ status: 'ok', timestamp: new Date() });

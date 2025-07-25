@@ -77,7 +77,6 @@
 <script setup lang="ts">
 import router from "@/router";
 import { BFormInput, BButton } from "bootstrap-vue-next";
-import { API_URL } from '../api'
 import { ref, onMounted } from "vue";
 import EmailRecuperarSenha from "@/views/EmailRecuperarSenha.vue";
 
@@ -111,7 +110,7 @@ const login = async () => {
     return;
   }
   try {
-    const resp = await fetch(`${API_URL}/login`, {
+    const resp = await fetch(`https://gerenciamento-lojas-calculadora-precos.onrender.com/login`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ email: email.value, senha: senha.value })

@@ -92,7 +92,6 @@
 
 <script setup lang="ts">
 import { ref, onMounted } from 'vue'
-import { API_URL } from '../api'
 import { authFetch, getCurrentUser } from '../api/authFetch'
 import { BModal } from 'bootstrap-vue-next'
 import ToastAlert from '../components/ToastAlert.vue'
@@ -145,15 +144,15 @@ const { toastMsg, toastType, showToast } = useToastAlert()
 
 async function carregar() {
   const user = getCurrentUser();
-  let lojasUrl = `${API_URL}/lojas`;
+  let lojasUrl = `https://gerenciamento-lojas-calculadora-precos.onrender.com/lojas`;
   // Se não for admin, filtra por funcionário
   if (user && user.id && user.id !== 0) {
     lojasUrl += `?funcionario_id=${user.id}`;
   }
   const [lojasResp, funcsResp, clientesResp] = await Promise.all([
     authFetch(lojasUrl),
-    authFetch(`${API_URL}/funcionarios`),
-    authFetch(`${API_URL}/clientes`)
+    authFetch(`https://gerenciamento-lojas-calculadora-precos.onrender.com/funcionarios`),
+    authFetch(`https://gerenciamento-lojas-calculadora-precos.onrender.com/clientes`)
   ])
   let lojasData = await lojasResp.json();
   // Se não for admin, filtra no frontend também
@@ -167,7 +166,7 @@ async function carregar() {
 
 async function confirmarExclusao() {
   if (idParaExcluir.value !== null) {
-    await authFetch(`${API_URL}/lojas/${idParaExcluir.value}`, { method: 'DELETE' });
+    await authFetch(`https://gerenciamento-lojas-calculadora-precos.onrender.com/lojas/${idParaExcluir.value}`, { method: 'DELETE' });
     await carregar();
     showToast('Loja excluída com sucesso!', 'success')
     showConfirmModal.value = false
@@ -180,10 +179,10 @@ async function salvar() {
   if (user && user.id && user.id !== 0) {
     form.value.funcionario_id = user.id;
   }
-  let url = `${API_URL}/lojas`;
+  let url = `https://gerenciamento-lojas-calculadora-precos.onrender.com/lojas`;
   let method = 'POST';
   if (form.value.id) {
-    url = `${API_URL}/lojas/${form.value.id}`;
+    url = `https://gerenciamento-lojas-calculadora-precos.onrender.com/lojas/${form.value.id}`;
     method = 'PUT';
   }
   await authFetch(url, {

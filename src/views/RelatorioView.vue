@@ -52,7 +52,6 @@ import { ref, onMounted } from "vue";
 import { BTable } from "bootstrap-vue-next";
 import { saveAs } from "file-saver";
 import ExcelJS from "exceljs";
-import { API_URL } from '../api';
 import { authFetch, getCurrentUser } from '../api/authFetch';
 
 const fields = [
@@ -93,7 +92,7 @@ async function carregarLojas() {
       return;
     }
     const user = getCurrentUser();
-    let url = `${API_URL}/lojas`;
+    let url = `https://gerenciamento-lojas-calculadora-precos.onrender.com/lojas`;
     // Se não for admin, filtra por funcionário
     if (user && user.id && user.id !== 0) {
       url += `?funcionario_id=${user.id}`;
@@ -113,7 +112,7 @@ async function carregarLojas() {
 async function atualizarLoja(loja: Loja) {
   const token = localStorage.getItem('token');
   if (token === 'homolog-token') return;
-  await authFetch(`${API_URL}/lojas/${loja.id}`, {
+  await authFetch(`https://gerenciamento-lojas-calculadora-precos.onrender.com/lojas/${loja.id}`, {
     method: "PUT",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify(loja)

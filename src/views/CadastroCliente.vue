@@ -49,7 +49,6 @@
 
 <script setup lang="ts">
 import { ref, onMounted } from 'vue'
-import { API_URL } from '../api'
 import { authFetch } from '../api/authFetch'
 import { BModal } from 'bootstrap-vue-next'
 import ToastAlert from '../components/ToastAlert.vue'
@@ -70,15 +69,15 @@ const idParaExcluir = ref<number | null>(null)
 const { toastMsg, toastType, showToast } = useToastAlert()
 
 async function carregar() {
-  const resp = await authFetch(`${API_URL}/clientes`);
+  const resp = await authFetch(`https://gerenciamento-lojas-calculadora-precos.onrender.com/clientes`);
   clientes.value = await resp.json();
 }
 
 async function salvar() {
-  let url = `${API_URL}/clientes`;
+  let url = `https://gerenciamento-lojas-calculadora-precos.onrender.com/clientes`;
   let method = 'POST';
   if (form.value.id) {
-    url = `${API_URL}/clientes/${form.value.id}`;
+    url = `https://gerenciamento-lojas-calculadora-precos.onrender.com/clientes/${form.value.id}`;
     method = 'PUT';
   }
   await authFetch(url, {
@@ -113,7 +112,7 @@ async function excluir(id: number) {
 
 async function confirmarExclusao() {
   if (idParaExcluir.value !== null) {
-    await authFetch(`${API_URL}/clientes/${idParaExcluir.value}`, { method: 'DELETE' });
+    await authFetch(`https://gerenciamento-lojas-calculadora-precos.onrender.com/clientes/${idParaExcluir.value}`, { method: 'DELETE' });
     await carregar();
     showToast('Cliente excluído com sucesso!', 'success')
     showConfirmModal.value = false

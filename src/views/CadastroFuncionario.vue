@@ -120,7 +120,6 @@
 
 <script setup lang="ts">
 import { ref, onMounted } from "vue";
-import { API_URL } from "../api";
 import { authFetch } from "../api/authFetch";
 import {
   BModal,
@@ -163,7 +162,7 @@ const idParaExcluir = ref<number | null>(null);
 const { toastMsg, toastType, showToast } = useToastAlert();
 
 async function carregar() {
-  const resp = await authFetch(`${API_URL}/funcionarios`);
+  const resp = await authFetch(`https://gerenciamento-lojas-calculadora-precos.onrender.com/funcionarios`);
   const rows = await resp.json();
   funcionarios.value = rows.map((r: any) => ({
     ...r,
@@ -177,10 +176,10 @@ async function salvar() {
     cargo_superior: form.value.cargo_superior ? 1 : 0,
   };
   const isAtualizar = !!form.value.id;
-  let url = `${API_URL}/funcionarios`;
+  let url = `https://gerenciamento-lojas-calculadora-precos.onrender.com/funcionarios`;
   let method = "POST";
   if (isAtualizar) {
-    url = `${API_URL}/funcionarios/${form.value.id}`;
+    url = `https://gerenciamento-lojas-calculadora-precos.onrender.com/funcionarios/${form.value.id}`;
     method = "PUT";
   }
 
@@ -233,7 +232,7 @@ async function excluir(id: number) {
 
 async function confirmarExclusao() {
   if (idParaExcluir.value !== null) {
-    await authFetch(`${API_URL}/funcionarios/${idParaExcluir.value}`, {
+    await authFetch(`https://gerenciamento-lojas-calculadora-precos.onrender.com/funcionarios/${idParaExcluir.value}`, {
       method: "DELETE",
     });
     await carregar();
@@ -274,7 +273,7 @@ async function atualizarPagamento(e: Funcionario) {
     valor_receber: atualizado.valor_receber,
     data_receber_pagamento: atualizado.data_receber_pagamento,
   };
-  let url = `${API_URL}/funcionarios/${atualizado.id}`;
+  let url = `https://gerenciamento-lojas-calculadora-precos.onrender.com/funcionarios/${atualizado.id}`;
   let method = "PUT";
   await authFetch(url, {
     method,

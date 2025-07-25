@@ -151,12 +151,19 @@ const resultadoVarianteShopee = computed(() => {
   if (!v || !p) return "";
   let baseValor = v;
   if (fornecedorSelecionado.value === 2.5 && baseValor <= 10) baseValor += 2.5;
-  // Shopee: taxa 25 + 5 adicional
-  const taxaShopee = 100 / (100 - 25);
-  const totalLucro = baseValor * (p / 100);
-  const baseAcumulado = 5 + baseValor; // 5 é o adicional fixo
-  const baseLucro = baseAcumulado + totalLucro;
-  const total = taxaShopee * baseLucro;
+
+  const custoComFrete = baseValor + 4;
+  const custoComTaxa = custoComFrete * (1 + 20 / 100);
+  const custoComTransicao = custoComTaxa + 3;
+  const custoComAdicional = custoComTransicao * (1 + 2 / 100);
+  const totalLucro = custoComAdicional * (p / 100);
+  const total = custoComAdicional + totalLucro;
+
+    console.log("Custo com frete:", custoComFrete); 
+    console.log("Custo com taxa:", custoComTaxa);
+    console.log("Custo com transição:", custoComTransicao);
+    console.log("Custo com adicional:", custoComAdicional);
+
   return {
     total: total.toFixed(2).replace(".", ","),
     lucro: totalLucro.toFixed(2).replace(".", ","),
@@ -213,22 +220,25 @@ function calcularMarketplaceAmazon(
 }
 
 function calcularMarketplaceShopee(
-  base: number,
+  custo: number,
   taxa: number,
   percentuais: number[],
-  adicional?: (acumulado: number) => number
+  frete: number,
+  transicao: number,
+  adicionalPorcentagem: number
 ) {
-  let baseValor = base;
-  let novaTaxa = 100 / (100 - taxa);
   return percentuais.map((p) => {
-    const totalLucro = (p / 100) * baseValor;
-    let baseAcumulado = baseValor + totalLucro; // 5 é o adicional fixo
-    if (adicional) baseAcumulado += adicional(baseAcumulado);
-    const total = novaTaxa * baseAcumulado;
+    const custoComFrete = custo + frete;
+    const custoComTaxa = custoComFrete * (1 + taxa / 100);
+    const custoComTransicao = custoComTaxa + transicao;
+    const custoComAdicional = custoComTransicao * (1 + adicionalPorcentagem / 100);
+    const totalLucro = custoComAdicional * (p / 100);
+    const total = custoComAdicional + totalLucro;
+  
     return {
       lucro: totalLucro.toFixed(2).replace(".", ","),
       total: total.toFixed(2).replace(".", ","),
-    };
+    }
   });
 }
 
@@ -236,7 +246,7 @@ const shopeeCalculos = computed(() => {
   if (!valor.value) return [null, null, null, null, null];
   let baseValor = Number(valor.value);
   if (fornecedorSelecionado.value === 2.5 && baseValor <= 10) baseValor += 2.5;
-  return calcularMarketplaceShopee(baseValor, 25, percentuais, (total) => 5);
+  return calcularMarketplaceShopee(baseValor, 20, percentuais, 4, 3, 2);
 });
 
 const amazonCalculos = computed(() => {

@@ -1,7 +1,6 @@
+import { defineConfig } from '@vue/cli-service'
 
-const { defineConfig } = require('@vue/cli-service')
-
-module.exports = defineConfig({
+export default defineConfig({
   publicPath: '/gerenciamento-lojas-calculadora-precos/',
   transpileDependencies: true,
 

@@ -342,7 +342,7 @@ app.post('/api/preencher', async (req, res) => {
           role: 'user',
           content: `Com base nesse prompt: produto ["${prompt}"]
                   tarefas:
-                  1. pesquise as 20 palavras chave mais relevantes na busca do produto e as cite espaçadas por (;)
+                  1. pesquise as palavras chave mais relevantes na busca do produto e as cite espaçadas por (;) e que seja no máximo 500 caracteres
                   2. crie um titulo para anuncios, utilizando apenas as palavras chave com o limite minimo de 130 caracteres cada
                   3. crie uma descrição com cerca de 120 palavras, lembre de ser convincente e incluir as especificações do produto
                   4. crie 5 bullet points sofisticados para cada anuncio

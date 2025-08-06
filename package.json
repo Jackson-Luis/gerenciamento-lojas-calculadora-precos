@@ -2,7 +2,7 @@
   "name": "gerenciamento-lojas-calculadora-precos",
   "version": "0.1.0",
   "private": true,
-   "type": "module",
+  "type": "module",
   "description": "## Project setup ``` npm install ```",
   "author": "",
   "homepage": "https://Jackson-Luis.github.io/gerenciamento-lojas-calculadora-precos",

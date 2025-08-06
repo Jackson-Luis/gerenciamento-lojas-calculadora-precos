@@ -330,6 +330,20 @@ app.post('/enviar-email', async (req, res) => {
   }
 });
 
+app.get('/verificar-email', async (req, res) => {
+  const { email } = req.query;
+  if (!email) {
+    return res.status(400).json({ exists: false, message: 'E-mail não fornecido.' });
+  }
+  try {
+    const { rows } = await pool.query('SELECT id FROM funcionario WHERE email = $1', [email]);
+    res.json({ exists: rows.length > 0 });
+  } catch (err) {
+    console.error('Erro ao verificar e-mail:', err);
+    res.status(500).json({ exists: false, message: 'Erro ao verificar e-mail.' });
+  }
+});
+
 
 app.post('/api/preencher', async (req, res) => {
   const { prompt } = req.body;

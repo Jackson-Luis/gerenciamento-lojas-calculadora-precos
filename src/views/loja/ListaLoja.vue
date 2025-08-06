@@ -1,6 +1,6 @@
 <template>
   <div>
-    <h2>Cadastro de Loja</h2>
+    <h2>Lista de Lojas</h2>
     <button class="btn btn-primary mb-3" @click="novo">Novo +</button>
     <form v-if="mostrarForm" @submit.prevent="salvar">
       <div class="mb-2">
@@ -77,8 +77,16 @@
           <td>{{ l.produto_mais_visitado }}</td>
           <td>{{ l.vendas_total }}</td>
           <td>
-            <button class="btn btn-primary btn-sm" @click="editar(l)">Editar</button>
-            <button class="btn btn-danger btn-sm ms-2" @click="excluir(l.id)">Excluir</button>
+            <BDropdown
+              size="lg"
+              variant="link"
+              toggle-class="text-decoration-none"
+              no-caret
+            >
+            <template #button-content>&#x2630;<span class="visually-hidden">Ações</span> </template>
+                <BDropdownItem @click="editar(l)">Editar</BDropdownItem>
+                <BDropdownItem @click="excluir(l.id!)">Excluir</BDropdownItem>
+            </BDropdown>
           </td>
         </tr>
       </tbody>
@@ -92,10 +100,10 @@
 
 <script setup lang="ts">
 import { ref, onMounted } from 'vue'
-import { authFetch, getCurrentUser } from '../api/authFetch'
-import { BModal } from 'bootstrap-vue-next'
-import ToastAlert from '../components/ToastAlert.vue'
-import { useToastAlert } from '../composables/useToastAlert'
+import { authFetch, getCurrentUser } from '@/api/authFetch'
+import { BModal, BDropdown, BDropdownItem } from 'bootstrap-vue-next'
+import ToastAlert from '@/components/ToastAlert.vue'
+import { useToastAlert } from '@/composables/useToastAlert'
 
 interface Loja {
   id?: number
@@ -157,9 +165,11 @@ async function carregar() {
   let lojasData = await lojasResp.json();
   // Se não for admin, filtra no frontend também
   if (user && user.id && user.id !== 0) {
-    lojasData = lojasData.filter((l: any) => l.funcionario_id === user.id);
+    lojasData = lojasData.filter((l: Loja) => l.funcionario_id === user.id);
   }
   lojas.value = lojasData;
+  
+  lojas.value.sort((a, b) => (a.cliente_nome ?? '').localeCompare(b.cliente_nome ?? ''));
   funcionarios.value = await funcsResp.json();
   clientes.value = await clientesResp.json();
 }

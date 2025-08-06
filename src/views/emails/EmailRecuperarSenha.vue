@@ -31,9 +31,9 @@
 
 <script setup lang="ts">
 import { ref, watch, defineProps, defineEmits } from "vue";
-import { render } from "@vue-email/render";
 import { BModal, BButton } from "bootstrap-vue-next";
 import EmailRSenhaTemplate from "@/components/emailRSenhaTemplate.vue";
+import { render } from "@vue-email/components";
 
 const props = defineProps<{ visivel: boolean }>();
 const emit = defineEmits(["fechar"]);

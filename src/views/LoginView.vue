@@ -78,7 +78,7 @@
 import router from "@/router";
 import { BFormInput, BButton } from "bootstrap-vue-next";
 import { ref, onMounted } from "vue";
-import EmailRecuperarSenha from "@/views/EmailRecuperarSenha.vue";
+import EmailRecuperarSenha from "@/views/emails/EmailRecuperarSenha.vue";
 
 const email = ref("");
 const senha = ref("");

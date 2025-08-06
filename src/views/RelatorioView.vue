@@ -68,6 +68,7 @@ const fields = [
 
 interface Loja {
   id: number;
+  funcionario_id: number; // Adicionado para corrigir o erro
   funcionario_nome: string;
   cliente_nome: string;
   nome: string;
@@ -101,9 +102,10 @@ async function carregarLojas() {
     let data = await resp.json();
     // Se não for admin, filtra no frontend também
     if (user && user.id && user.id !== 0) {
-      data = data.filter((l: any) => l.funcionario_id === user.id);
+      data = data.filter((l: Loja) => l.funcionario_id === user.id);
     }
     lojas.value = data;
+    lojas.value.sort((a, b) => (a.cliente_nome ?? '').localeCompare(b.cliente_nome ?? ''));
   } finally {
     loading.value = false;
   }

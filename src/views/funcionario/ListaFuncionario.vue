@@ -1,59 +1,9 @@
 <template>
   <div>
-    <h2>Cadastro de Funcionário</h2>
-    <button class="btn btn-primary mb-3" @click="novo">Novo +</button>
-    <form v-if="mostrarForm" @submit.prevent="salvar">
-      <div class="mb-2">
-        <label>Nome:</label>
-        <input v-model="form.nome" class="form-control" required />
-      </div>
-      <div class="mb-2">
-        <label>Email:</label>
-        <input
-          v-model="form.email"
-          class="form-control"
-          type="email"
-          required
-        />
-      </div>
-      <div class="mb-2">
-        <label>Senha:</label>
-        <input
-          v-model="form.senha"
-          class="form-control"
-          type="password"
-          :required="!form.id"
-          autocomplete="new-password"
-        />
-      </div>
-      <div class="mb-2">
-        <label>Chave Pix:</label>
-        <input
-          v-model="form.chave_pix"
-          class="form-control"
-        />
-      </div>
-      <div class="mb-2">
-        <label>Telefone:</label>
-        <input
-          v-model="form.telefone"
-          class="form-control"
-          @input="maskTelefone"
-          maxlength="15"
-        />
-      </div>
-      <div class="mb-2">
-        <BFormCheckbox switch v-model="form.cargo_superior">Cargo Superior</BFormCheckbox>
-      </div>
-      <button class="btn btn-success" type="submit">
-        {{ form.id ? "Atualizar" : "Adicionar" }}
-      </button>
-      <button class="btn btn-secondary ms-2" type="button" @click="cancelar">
-        Cancelar
-      </button>
-    </form>
-    <hr />
-    <h3>Funcionários</h3>
+    <div class="d-flex justify-content-between">
+      <h3>Lista de Funcionários</h3>
+      <button class="btn btn-primary mb-3" @click="novo">Novo +</button>
+    </div>
     <table class="table table-bordered">
       <thead>
         <tr>
@@ -99,7 +49,7 @@
             >
             <template #button-content>&#x2630;<span class="visually-hidden">Ações</span> </template>
                 <BDropdownItem @click="editar(f)">Editar</BDropdownItem>
-                <BDropdownItem @click="excluir(f.id)">Excluir</BDropdownItem>
+                <BDropdownItem @click="excluir(f.id!)">Excluir</BDropdownItem>
             </BDropdown>
           </td>
         </tr>
@@ -115,22 +65,23 @@
       Tem certeza que deseja excluir este funcionário?
     </BModal>
     <ToastAlert :message="toastMsg" :type="toastType" />
+    <ModalFuncionario v-model="showModal" :edicao-funcionario="editarFuncionario" @success="carregar" />
   </div>
 </template>
 
 <script setup lang="ts">
 import { ref, onMounted } from "vue";
-import { authFetch } from "../api/authFetch";
+import { authFetch } from "@/api/authFetch";
 import {
   BModal,
-  BFormCheckbox,
   BInputGroup,
   BFormInput,
   BDropdown,
   BDropdownItem,
 } from "bootstrap-vue-next";
-import ToastAlert from "../components/ToastAlert.vue";
-import { useToastAlert } from "../composables/useToastAlert";
+import ToastAlert from "@/components/ToastAlert.vue";
+import { useToastAlert } from "@/composables/useToastAlert";
+import ModalFuncionario from "./ModalFuncionario.vue";
 
 interface Funcionario {
   id?: number;
@@ -158,16 +109,18 @@ const form = ref<Funcionario>({
 const mostrarForm = ref(false);
 const showConfirmModal = ref(false);
 const idParaExcluir = ref<number | null>(null);
-
+const showModal = ref(false)
+const editarFuncionario = ref<Funcionario | null>(null)
 const { toastMsg, toastType, showToast } = useToastAlert();
 
 async function carregar() {
   const resp = await authFetch(`https://gerenciamento-lojas-calculadora-precos.onrender.com/funcionarios`);
   const rows = await resp.json();
-  funcionarios.value = rows.map((r: any) => ({
+  funcionarios.value = rows.map((r: Funcionario) => ({
     ...r,
     cargo_superior: !!r.cargo_superior,
   }));
+  funcionarios.value.sort((a, b) => a.nome.localeCompare(b.nome));
 }
 
 async function salvar() {
@@ -211,15 +164,14 @@ async function salvar() {
 
 
 function novo() {
-  limpar();
-  mostrarForm.value = true;
+  showModal.value = true
+  editarFuncionario.value = null
 }
 
 function editar(f: Funcionario) {
-  form.value = { ...f };
-  mostrarForm.value = true;
+  editarFuncionario.value = { ...f }
+  showModal.value = true
 }
-
 function cancelar() {
   mostrarForm.value = false;
   limpar();
@@ -250,20 +202,6 @@ function limpar() {
     senha: "",
     cargo_superior: false,
   };
-}
-
-function maskTelefone(e: Event) {
-  let v = (e.target as HTMLInputElement).value.replace(/\D/g, "");
-  if (v.length > 11) v = v.slice(0, 11);
-  if (v.length > 6) {
-    v = v.replace(/^(\d{2})(\d{5})(\d{0,4}).*/, "($1) $2-$3");
-  } else if (v.length > 2) {
-    v = v.replace(/^(\d{2})(\d{0,5})/, "($1) $2");
-  } else {
-    v = v.replace(/^(\d*)/, "($1");
-  }
-  (e.target as HTMLInputElement).value = v;
-  form.value.telefone = v;
 }
 
 async function atualizarPagamento(e: Funcionario) {

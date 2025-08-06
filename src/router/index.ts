@@ -1,12 +1,12 @@
 import { createRouter, createWebHashHistory, RouteRecordRaw } from 'vue-router'
 import Relatorio from '../views/RelatorioView.vue'
 import Calculadora from '../views/CalculadoraView.vue'
-import CadastroCliente from '../views/CadastroCliente.vue'
-import CadastroFuncionario from '../views/CadastroFuncionario.vue'
-import CadastroLoja from '../views/CadastroLoja.vue'
+import Cliente from '../views/cliente/ListaCliente.vue'
+import Funcionario from '../views/funcionario/ListaFuncionario.vue'
+import Loja from '../views/loja/ListaLoja.vue'
 import Login from '../views/LoginView.vue'
-import EmailRecuperarSenha from '../views/EmailRecuperarSenha.vue'
-import EmailCadastrarSenha from '../views/EmailCadastrarSenha.vue'
+import EmailRecuperarSenha from '../views/emails/EmailRecuperarSenha.vue'
+import EmailCadastrarSenha from '../views/emails/EmailCadastrarSenha.vue'
 import TesteIA from '../views/TesteIa.vue'
 
 const routes: Array<RouteRecordRaw> = [
@@ -35,19 +35,19 @@ const routes: Array<RouteRecordRaw> = [
     component: Calculadora
   },
   {
-    path: '/cadastro-cliente',
-    name: 'cadastro-cliente',
-    component: CadastroCliente
+    path: '/cliente',
+    name: 'cliente',
+    component: Cliente
   },
   {
-    path: '/cadastro-funcionario',
-    name: 'cadastro-funcionario',
-    component: CadastroFuncionario
+    path: '/funcionario',
+    name: 'funcionario',
+    component: Funcionario
   },
   {
-    path: '/cadastro-loja',
-    name: 'cadastro-loja',
-    component: CadastroLoja
+    path: '/loja',
+    name: 'loja',
+    component: Loja
   },
   {
     path: '/esqueci-senha',

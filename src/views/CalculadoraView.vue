@@ -34,8 +34,10 @@
                 />
                 <div v-if="porcentagemVarianteShopee && valor">
                   {{ porcentagemVarianteShopee }}% - R$
-                  {{ resultadoVarianteShopee.total }} - Lucro: R$
-                  {{ resultadoVarianteShopee.lucro }}
+                  <span v-if="resultadoVarianteShopee && typeof resultadoVarianteShopee === 'object'">
+                    {{ resultadoVarianteShopee.total }} - Lucro: R$
+                    {{ resultadoVarianteShopee.lucro }}
+                  </span>
                 </div>
                 <BButton
                   v-if="resultadoVarianteShopee"
@@ -60,7 +62,7 @@
                       size="sm"
                       class="mx-1"
                       variant="outline-secondary"
-                      @click="copiarValor(String(item.total))"
+                      @click="item && copiarValor(String(item.total))"
                       >📋</BButton
                     >
                   </template>
@@ -83,7 +85,7 @@
                   placeholder="Porcentagem variante"
                   style="width: 250px"
                 />
-                <div v-if="porcentagemVarianteAmazon && valor">
+                <div v-if="porcentagemVarianteAmazon && valor && resultadoVarianteAmazon && typeof resultadoVarianteAmazon === 'object'">
                   {{ porcentagemVarianteAmazon }}% - R$
                   {{ resultadoVarianteAmazon.total }} - Lucro: R$
                   {{ resultadoVarianteAmazon.lucro }}
@@ -111,7 +113,7 @@
                       size="sm"
                       class="mx-1"
                       variant="outline-secondary"
-                      @click="copiarValor(String(item.total))"
+                      @click="item && copiarValor(String(item.total))"
                       >📋</BButton
                     >
                   </template>

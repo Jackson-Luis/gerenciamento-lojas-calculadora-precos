@@ -6,13 +6,13 @@
     />
     <BCollapse id="nav-collapse" is-nav :visible="collapseVisible">
       <BNavbarNav class="w-100 justify-content-around">
-        <BNavItem v-if="isAdmin" to="/cadastro-funcionario" tag="router-link"
+        <BNavItem v-if="isAdmin" to="/funcionario" tag="router-link"
           >Funcionários</BNavItem
         >
-        <BNavItem v-if="isAdmin" to="/cadastro-cliente" tag="router-link"
+        <BNavItem v-if="isAdmin" to="/cliente" tag="router-link"
           >Clientes</BNavItem
         >
-        <BNavItem v-if="isAdmin" to="/cadastro-loja" tag="router-link"
+        <BNavItem v-if="isAdmin" to="/loja" tag="router-link"
           >Lojas</BNavItem
         >
 
@@ -42,7 +42,7 @@
 
   <ModalSenha
     v-model="showPasswordModal"
-    @success="showToast('Senha alterada com sucesso!', 'success')"
+    @success="toast('Senha alterada com sucesso!', 'success')"
   />
 </template>
 

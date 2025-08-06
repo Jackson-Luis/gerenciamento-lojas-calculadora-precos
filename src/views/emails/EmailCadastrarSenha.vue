@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { Button, Hr, Html, Text } from '@vue-email/components'
-import { ref, onMounted, defineProps } from "vue";
+import { defineProps } from "vue";
 
 defineProps({
   title: String,

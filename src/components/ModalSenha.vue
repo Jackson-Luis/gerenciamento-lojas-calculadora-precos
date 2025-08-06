@@ -39,19 +39,11 @@
 </template>
 
 <script setup lang="ts">
-/* -------------------------------------------------------------------------- */
-/* Imports                                                                    */
-/* -------------------------------------------------------------------------- */
 import { reactive, ref, watch, defineProps, defineEmits } from 'vue'
 import { BModal } from 'bootstrap-vue-next'
 import { authFetch } from '@/api/authFetch'
-import { API_URL } from '../api'
 
-/* -------------------------------------------------------------------------- */
-/* Props / Emits                                                              */
-/* -------------------------------------------------------------------------- */
 const props = defineProps<{
-  /** v-model */
   modelValue: boolean
 }>()
 
@@ -60,9 +52,6 @@ const emit = defineEmits<{
   (e: 'success'): void
 }>()
 
-/* -------------------------------------------------------------------------- */
-/* State                                                                      */
-/* -------------------------------------------------------------------------- */
 const showModal = ref(props.modelValue)
 const isLoading = ref(false)
 const error = ref('')
@@ -71,9 +60,6 @@ const form = reactive({
   repeteSenha: '',
 })
 
-/* -------------------------------------------------------------------------- */
-/* Reatividade v-model                                                        */
-/* -------------------------------------------------------------------------- */
 watch(
   () => props.modelValue,
   (v) => (showModal.value = v)
@@ -83,9 +69,6 @@ watch(
   (v) => emit('update:modelValue', v)
 )
 
-/* -------------------------------------------------------------------------- */
-/* Métodos                                                                     */
-/* -------------------------------------------------------------------------- */
 function reset() {
   form.novaSenha = ''
   form.repeteSenha = ''

@@ -102,13 +102,6 @@ onMounted(() => {
 });
 
 const login = async () => {
-  // Login de homologação (bypass)
-  if (email.value === 'admin@email.com' && senha.value === 'admin') {
-    localStorage.setItem('token', 'homolog-token');
-    localStorage.setItem('user', JSON.stringify({ id: 0, nome: 'Admin', email: 'admin@email.com' }));
-    router.push('/relatorio');
-    return;
-  }
   try {
     const resp = await fetch(`https://gerenciamento-lojas-calculadora-precos.onrender.com/login`, {
       method: 'POST',

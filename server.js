@@ -381,10 +381,13 @@ app.post('/api/preencher', async (req, res) => {
     res.json(json);
   } catch (err) {
     console.error('Erro ao fazer parse do JSON:', err.message);
+    // eslint-disable-next-line no-undef
     console.log('Conteúdo retornado:', completion.choices[0].message.content);
     res.status(500).json({ error: 'Erro ao interpretar JSON retornado pela IA.' });
   }
 });
+
+
 
 app.get('/health', (req, res) => {
   res.json({ status: 'ok', timestamp: new Date() });

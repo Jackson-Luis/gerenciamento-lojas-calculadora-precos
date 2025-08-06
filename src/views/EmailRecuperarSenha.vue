@@ -59,6 +59,15 @@ const enviar = async () => {
     return;
   }
 
+  const isEmailExistente = await fetch(`https://gerenciamento-lojas-calculadora-precos.onrender.com/verificar-email?email=${email.value}`)
+    .then(res => res.json())
+    .then(data => data.exists);
+    console.log("E-mail existe:", isEmailExistente);
+  if (!isEmailExistente) {
+    alert("E-mail não cadastrado");
+    return;
+  }
+
   enviando.value = true;
 
   try {

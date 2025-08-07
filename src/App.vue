@@ -100,6 +100,5 @@ onMounted(() => {
       clearTimeout(timeOutLogin)
     }
   }, 1000)
-
 })
 </script>

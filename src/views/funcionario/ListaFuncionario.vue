@@ -95,21 +95,16 @@
 </template>
 
 <script setup lang="ts">
-import { ref, onMounted, computed, useTemplateRef, watch } from "vue";
+import { ref, onMounted, computed, watch } from "vue";
 import { authFetch } from "@/api/authFetch";
 import {
-  BButton,
   BModal,
   BDropdown,
   BDropdownItem,
   BPagination,
   BTable,
   BFormSelect,
-  BTableProviderContext,
-  BTableSortBy,
-  ColorVariant,
   TableFieldRaw,
-  TableItem,
   BFormInput,
 } from "bootstrap-vue-next";
 import ToastAlert from "@/components/ToastAlert.vue";
@@ -129,17 +124,7 @@ interface Funcionario {
 }
 
 const funcionarios = ref<Funcionario[]>([]);
-const form = ref<Funcionario>({
-  nome: "",
-  telefone: "",
-  email: "",
-  senha: "",
-  cargo_superior: false,
-  valor_receber: 0,
-  data_receber_pagamento: "",
-  chave_pix: "",
-});
-const mostrarForm = ref(false);
+
 const showConfirmModal = ref(false);
 const idParaExcluir = ref<number | null>(null);
 const showModal = ref(false);
@@ -215,35 +200,6 @@ const rows =  computed(() => filteredItems.value.length)
 
 const table = ref()
 
-const provider = (context: Readonly<BTableProviderContext<Funcionario>>) =>
-  sortItems(filteredItems.value, context.sortBy).slice(
-    (context.currentPage - 1) * context.perPage,
-    context.currentPage * context.perPage
-  )
-
-const sortItems = (items: Funcionario[], sortBy?: BTableSortBy[]) => {
-  if (!sortBy || sortBy.length === 0) {
-    return items
-  }
-
-  return filteredItems.value.slice().sort((a: Funcionario, b: Funcionario) => {
-    for (const sort of sortBy) {
-      if (sort.order === undefined) {
-        continue
-      }
-      const order = sort.order === 'asc' ? 1 : -1
-      const key = sort.key as keyof Funcionario
-      const aValue = a[key] as string | number
-      const bValue = b[key] as string | number
-      if (aValue < bValue) {
-        return -1 * order
-      } else if (aValue > bValue) {
-        return 1 * order
-      }
-    }
-    return 0
-  })
-}
 
 watch(filter, () => {
   table.value?.refresh()
@@ -292,16 +248,6 @@ async function confirmarExclusao() {
     showConfirmModal.value = false;
     idParaExcluir.value = null;
   }
-}
-
-function limpar() {
-  form.value = {
-    nome: "",
-    telefone: "",
-    email: "",
-    senha: "",
-    cargo_superior: false,
-  };
 }
 
 async function atualizarPagamento(e: Funcionario) {

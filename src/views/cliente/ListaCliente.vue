@@ -73,21 +73,16 @@
 </template>
 
 <script setup lang="ts">
-import { ref, onMounted, computed, useTemplateRef, watch } from "vue";
+import { ref, onMounted, computed, watch } from "vue";
 import { authFetch } from "@/api/authFetch";
 import {
-  BButton,
   BModal,
   BDropdown,
   BDropdownItem,
   BPagination,
   BTable,
   BFormSelect,
-  BTableProviderContext,
-  BTableSortBy,
-  ColorVariant,
   TableFieldRaw,
-  TableItem,
   BFormInput,
 } from "bootstrap-vue-next";
 import ToastAlert from "@/components/ToastAlert.vue";
@@ -150,36 +145,6 @@ const filteredItems = computed(() => {
 const rows = computed(() => filteredItems.value.length);
 
 const table = ref();
-
-const provider = (context: Readonly<BTableProviderContext<Cliente>>) =>
-  sortItems(filteredItems.value, context.sortBy).slice(
-    (context.currentPage - 1) * context.perPage,
-    context.currentPage * context.perPage
-  );
-
-const sortItems = (items: Cliente[], sortBy?: BTableSortBy[]) => {
-  if (!sortBy || sortBy.length === 0) {
-    return items;
-  }
-
-  return filteredItems.value.slice().sort((a: Cliente, b: Cliente) => {
-    for (const sort of sortBy) {
-      if (sort.order === undefined) {
-        continue;
-      }
-      const order = sort.order === "asc" ? 1 : -1;
-      const key = sort.key as keyof Cliente;
-      const aValue = a[key] as string | number;
-      const bValue = b[key] as string | number;
-      if (aValue < bValue) {
-        return -1 * order;
-      } else if (aValue > bValue) {
-        return 1 * order;
-      }
-    }
-    return 0;
-  });
-};
 
 watch(filter, () => {
   table.value?.refresh();

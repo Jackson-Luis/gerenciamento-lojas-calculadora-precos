@@ -81,21 +81,16 @@
 </template>
 
 <script setup lang="ts">
-import { ref, onMounted, computed, useTemplateRef, watch } from "vue";
+import { ref, onMounted, computed, watch } from "vue";
 import { authFetch, getCurrentUser } from "@/api/authFetch";
 import {
-  BButton,
   BModal,
   BDropdown,
   BDropdownItem,
   BPagination,
   BTable,
   BFormSelect,
-  BTableProviderContext,
-  BTableSortBy,
-  ColorVariant,
   TableFieldRaw,
-  TableItem,
   BFormInput,
 } from "bootstrap-vue-next";
 import ToastAlert from "@/components/ToastAlert.vue";
@@ -130,18 +125,7 @@ interface Cliente {
 const lojas = ref<Loja[]>([]);
 const funcionarios = ref<Funcionario[]>([]);
 const clientes = ref<Cliente[]>([]);
-const form = ref<Loja>({
-  nome: "",
-  funcionario_id: 0,
-  cliente_id: 0,
-  anuncios_total: 0,
-  anuncios_realizados: 0,
-  anuncios_otimizados: 0,
-  visitas_semana: 0,
-  produto_mais_visitado: "",
-  vendas_total: 0,
-});
-const mostrarForm = ref(false);
+
 const showConfirmModal = ref(false);
 const idParaExcluir = ref<number | null>(null);
 const showModal = ref(false);
@@ -224,36 +208,6 @@ const rows =  computed(() => filteredItems.value.length)
 
 const table = ref()
 
-const provider = (context: Readonly<BTableProviderContext<Loja>>) =>
-  sortItems(filteredItems.value, context.sortBy).slice(
-    (context.currentPage - 1) * context.perPage,
-    context.currentPage * context.perPage
-  )
-
-const sortItems = (items: Loja[], sortBy?: BTableSortBy[]) => {
-  if (!sortBy || sortBy.length === 0) {
-    return items
-  }
-
-  return filteredItems.value.slice().sort((a: Loja, b: Loja) => {
-    for (const sort of sortBy) {
-      if (sort.order === undefined) {
-        continue
-      }
-      const order = sort.order === 'asc' ? 1 : -1
-      const key = sort.key as keyof Loja
-      const aValue = a[key] as string | number
-      const bValue = b[key] as string | number
-      if (aValue < bValue) {
-        return -1 * order
-      } else if (aValue > bValue) {
-        return 1 * order
-      }
-    }
-    return 0
-  })
-}
-
 watch(filter, () => {
   table.value?.refresh()
 })
@@ -301,30 +255,6 @@ async function confirmarExclusao() {
   }
 }
 
-async function salvar() {
-  const user = getCurrentUser();
-  if (user && user.id && user.id !== 0) {
-    form.value.funcionario_id = user.id;
-  }
-  let url = `https://gerenciamento-lojas-calculadora-precos.onrender.com/lojas`;
-  let method = "POST";
-  if (form.value.id) {
-    url = `https://gerenciamento-lojas-calculadora-precos.onrender.com/lojas/${form.value.id}`;
-    method = "PUT";
-  }
-  await authFetch(url, {
-    method,
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify(form.value),
-  });
-  cancelar();
-  await carregar();
-  showToast(
-    form.value.id ? "Loja atualizada com sucesso!" : "Loja criada com sucesso!",
-    "success"
-  );
-}
-
 function novo() {
   showModal.value = true;
   editarLoja.value = null;
@@ -335,28 +265,9 @@ function editar(l: Loja) {
   showModal.value = true;
 }
 
-function cancelar() {
-  mostrarForm.value = false;
-  limpar();
-}
-
 async function excluir(id: number) {
   idParaExcluir.value = id;
   showConfirmModal.value = true;
-}
-
-function limpar() {
-  form.value = {
-    nome: "",
-    funcionario_id: 0,
-    cliente_id: 0,
-    anuncios_total: 0,
-    anuncios_realizados: 0,
-    anuncios_otimizados: 0,
-    visitas_semana: 0,
-    produto_mais_visitado: "",
-    vendas_total: 0,
-  };
 }
 
 function alertConfirmacaoSucesso() {

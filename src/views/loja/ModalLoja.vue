@@ -30,7 +30,7 @@
 
 <script setup lang="ts">
 import { reactive, ref, watch, defineProps, defineEmits, computed } from "vue";
-import { BButton, BModal, BFormCheckbox } from "bootstrap-vue-next";
+import { BButton, BModal } from "bootstrap-vue-next";
 import { getCurrentUser } from "@/api/authFetch";
 import { authFetch } from "@/api/authFetch";
 
@@ -123,14 +123,6 @@ function reset() {
   form.funcionario_id = funcionarioNaoAdmin.value;
   form.cliente_id = null;
   error.value = "";
-}
-
-function maskTelefone(event: Event) {
-  const input = event.target as HTMLInputElement;
-  input.value = input.value
-    .replace(/\D/g, "")
-    .replace(/(\d{2})(\d)/, "($1) $2")
-    .replace(/(\d)(\d{4})$/, "$1-$2");
 }
 
 async function cadastrarOuEditar() {

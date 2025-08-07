@@ -22,15 +22,12 @@
 import { reactive, ref, watch, defineProps, defineEmits } from 'vue'
 import { BModal, BButton } from 'bootstrap-vue-next'
 import { authFetch } from '@/api/authFetch'
-import { useToastAlert } from '@/composables/useToastAlert';
 
 interface Cliente {
   id?: number | null
   nome: string
   telefone: string
 }
-
-const { showToast } = useToastAlert()
 
 const props = defineProps<{
     modelValue: boolean

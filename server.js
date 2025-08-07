@@ -83,7 +83,7 @@ app.post('/login', async (req, res) => {
     };
 
     const SECRET = process.env.JWT_SECRET || 'chave_muito_secreta';
-    const token = jwt.sign(user, SECRET, { expiresIn: '1h' });
+    const token = jwt.sign(user, SECRET, { expiresIn: '1s' });
 
     return res.json({ token, user });
   } catch (err) {

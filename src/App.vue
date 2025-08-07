@@ -27,6 +27,7 @@ import {
   BButton
 } from 'bootstrap-vue-next'
 import { useRouter, useRoute } from 'vue-router'
+import {jwtDecode} from 'jwt-decode';
 
 const corAtual = ref<'light' | 'dark'>('dark')
 
@@ -65,7 +66,40 @@ function acessarLogin() {
   router.push({ name: 'login' })
 }
 
+
+function checkAuthToken(token: string): boolean {
+  if (!token) return false;
+
+  console.log("Verificando token de autenticação:", token);
+  console.log(jwtDecode(token))
+
+  interface DecodedToken {
+    id: number;
+    nome: string;
+    email: string;
+    cargo_superior: boolean;
+    iat: number;
+    exp: number;
+  }
+
+  const decoded: DecodedToken =  jwtDecode(token);
+  const now = Date.now() / 1000;
+  return decoded && decoded.exp > now;
+
+}
+
+
 onMounted(() => {
   carregarCorAtual()
+  const timeOutLogin = setTimeout(() => {
+  const token = localStorage.getItem('token');
+    if (!checkAuthToken(token ?? '')) {
+      //localStorage.removeItem('token');
+      console.log("Token inválido ou expirado, redirecionando para login");
+      acessarLogin();
+      clearTimeout(timeOutLogin)
+    }
+  }, 1000)
+
 })
 </script>

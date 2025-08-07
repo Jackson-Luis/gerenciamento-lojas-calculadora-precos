@@ -1,7 +1,7 @@
 <template>
-    <BModal v-model="showModal" title="Alterar senha" ok-title="Salvar" cancel-title="Cancelar" @ok="cadastrarOuEditar"
-        :ok-disabled="isLoading">
-        <div>
+    <BModal v-model="showModal" :title="form.id ? 'Atualizar Funcionário' : 'Cadastrar novo Funcionário'" ok-title="Salvar" cancel-title="Cancelar" @ok="cadastrarOuEditar"
+        :ok-disabled="isLoading" no-footer>
+         <form @submit.prevent="cadastrarOuEditar">
             <div class="mb-2">
                 <label>Nome:</label>
                 <input v-model="form.nome" class="form-control" required />
@@ -26,19 +26,32 @@
             <div class="mb-2">
                 <BFormCheckbox switch v-model="form.cargo_superior">Cargo Superior</BFormCheckbox>
             </div>
-            <button class="btn btn-success" type="submit">
-                {{ form.id ? "Atualizar" : "Adicionar" }}
-            </button>
-        </div>
+            <hr />
+            <div class="mb-2 d-flex justify-content-end">
+                <BButton class="btn btn-success" type="submit">{{ form.id ? 'Atualizar' : 'Adicionar' }}</BButton>
+                <BButton class="btn btn-secondary ms-2" type="button" @click="cancelar">Cancelar</BButton>
+            </div>
+        </form>
     </BModal>
 </template>
 <script setup lang="ts">
 import { reactive, ref, watch, defineProps, defineEmits } from 'vue'
-import { BModal } from 'bootstrap-vue-next'
+import { BButton, BModal, BFormCheckbox } from 'bootstrap-vue-next'
 import { authFetch } from '@/api/authFetch'
+
+interface Funcionario {
+  id?: number | null
+  nome: string
+  telefone: string
+  email: string
+  senha: string 
+  cargo_superior: boolean
+  chave_pix: string
+}
 
 const props = defineProps<{
     modelValue: boolean
+    edicaoFuncionario?: Funcionario | null
 }>()
 const emit = defineEmits<{
     (e: 'update:modelValue', v: boolean): void
@@ -61,8 +74,24 @@ watch(() => props.modelValue, (newVal) => {
 })
 watch(() => showModal.value, (newVal) => {
     emit('update:modelValue', newVal)
-    if (!newVal) reset()
+     if(props.edicaoFuncionario && props.edicaoFuncionario.id) {
+        form.id = props.edicaoFuncionario.id
+        form.nome = props.edicaoFuncionario.nome
+        form.telefone = props.edicaoFuncionario.telefone
+        form.email = props.edicaoFuncionario.email
+        form.senha = props.edicaoFuncionario.senha
+        form.chave_pix = props.edicaoFuncionario.chave_pix
+        form.cargo_superior = props.edicaoFuncionario.cargo_superior
+    } else {
+        reset()
+    }
 })
+
+function cancelar() {
+    showModal.value = false
+    reset()
+}
+
 function reset() {
     form.id = undefined
     form.nome = ''
@@ -73,10 +102,12 @@ function reset() {
     form.cargo_superior = false
     error.value = ''
 }
+
 function maskTelefone(event: Event) {
     const input = event.target as HTMLInputElement
     input.value = input.value.replace(/\D/g, '').replace(/(\d{2})(\d)/, '($1) $2').replace(/(\d)(\d{4})$/, '$1-$2')
 }
+
 async function cadastrarOuEditar() {
     isLoading.value = true
     try {
@@ -91,6 +122,8 @@ async function cadastrarOuEditar() {
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify(form)
         });
+
+        showModal.value = false
         emit('success')
         reset()
     } catch (err) {

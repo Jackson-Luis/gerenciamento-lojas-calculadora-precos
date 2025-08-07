@@ -1,5 +1,5 @@
 <template>
-    <BModal v-model="showModal" :title="form.id ? 'Atualizar cliente' : 'Cadastrar novo Cliente'" @ok="cadastrarOuEditar"
+    <BModal v-model="showModal" :title="form.id ? 'Atualizar cliente' : 'Cadastrar novo Cliente'" @ok="cadastrarOuEditar" style="color: Black"
         :ok-disabled="isLoading" no-footer>
         <form @submit.prevent="cadastrarOuEditar">
             <div class="mb-2">
@@ -94,21 +94,13 @@ async function cadastrarOuEditar() {
         });
 
         showModal.value = false
-
-        if (form.id) {
-            showToast('Cliente atualizado com sucesso!', 'success')
-        } else {
-            showToast('Cliente criado com sucesso!', 'success')
-        }
         emit('success')
         reset()
     } catch (err) {
         if (form.id) {
             error.value = 'Erro ao atualizar cliente.'
-            showToast('Erro ao atualizar cliente.', 'danger')
         } else {
             error.value = 'Erro ao criar cliente.'
-            showToast('Erro ao criar cliente.', 'danger')
         }
     } finally {
         isLoading.value = false

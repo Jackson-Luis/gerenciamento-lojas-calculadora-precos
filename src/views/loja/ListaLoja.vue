@@ -1,186 +1,303 @@
 <template>
   <div>
-    <h2>Lista de Lojas</h2>
-    <button class="btn btn-primary mb-3" @click="novo">Novo +</button>
-    <form v-if="mostrarForm" @submit.prevent="salvar">
-      <div class="mb-2">
-        <label>Nome da Loja:</label>
-        <input v-model="form.nome" class="form-control" required />
-      </div>
-      <div class="mb-2">
-        <label>Funcionário:</label>
-        <select v-model="form.funcionario_id" class="form-control" required>
-          <option value="" disabled>Selecione</option>
-          <option v-for="f in funcionarios" :key="f.id" :value="f.id">{{ f.nome }}</option>
-        </select>
-      </div>
-      <div class="mb-2">
-        <label>Cliente:</label>
-        <select v-model="form.cliente_id" class="form-control" required>
-          <option value="" disabled>Selecione</option>
-          <option v-for="c in clientes" :key="c.id" :value="c.id">{{ c.nome }}</option>
-        </select>
-      </div>
-      <div class="mb-2">
-        <label>Anúncios Total:</label>
-        <input type="number" min="0" v-model.number="form.anuncios_total" class="form-control" />
-      </div>
-      <div class="mb-2">
-        <label>Anúncios Realizados:</label>
-        <input type="number" min="0" v-model.number="form.anuncios_realizados" class="form-control" />
-      </div>
-      <div class="mb-2">
-        <label>Anúncios Otimizados:</label>
-        <input type="number" min="0" v-model.number="form.anuncios_otimizados" class="form-control" />
-      </div>
-      <div class="mb-2">
-        <label>Visitas Semana:</label>
-        <input type="number" min="0" v-model.number="form.visitas_semana" class="form-control" />
-      </div>
-      <div class="mb-2">
-        <label>Produto Mais Visitado:</label>
-        <input v-model="form.produto_mais_visitado" class="form-control" />
-      </div>
-      <div class="mb-2">
-        <label>Vendas Total:</label>
-        <input type="number" min="0" v-model.number="form.vendas_total" class="form-control" />
-      </div>
-      <button class="btn btn-success" type="submit">{{ form.id ? 'Atualizar' : 'Adicionar' }}</button>
-      <button class="btn btn-secondary ms-2" type="button" @click="cancelar">Cancelar</button>
-    </form>
-    <hr />
-    <h3>Lojas</h3>
-    <table class="table table-bordered">
-      <thead>
-        <tr>
-          <th>Nome</th>
-          <th>Funcionário</th>
-          <th>Cliente</th>
-          <th>Anúncios Total</th>
-          <th>Anúncios Realizados</th>
-          <th>Anúncios Otimizados</th>
-          <th>Visitas Semana</th>
-          <th>Produto Mais Visitado</th>
-          <th>Vendas Total</th>
-          <th>Ações</th>
-        </tr>
-      </thead>
-      <tbody>
-        <tr v-for="l in lojas" :key="l.id">
-          <td>{{ l.nome }}</td>
-          <td>{{ l.funcionario_nome }}</td>
-          <td>{{ l.cliente_nome }}</td>
-          <td>{{ l.anuncios_total }}</td>
-          <td>{{ l.anuncios_realizados }}</td>
-          <td>{{ l.anuncios_otimizados }}</td>
-          <td>{{ l.visitas_semana }}</td>
-          <td>{{ l.produto_mais_visitado }}</td>
-          <td>{{ l.vendas_total }}</td>
-          <td>
-            <BDropdown
-              size="lg"
-              variant="link"
-              toggle-class="text-decoration-none"
-              no-caret
-            >
-            <template #button-content>&#x2630;<span class="visually-hidden">Ações</span> </template>
-                <BDropdownItem @click="editar(l)">Editar</BDropdownItem>
-                <BDropdownItem @click="excluir(l.id!)">Excluir</BDropdownItem>
-            </BDropdown>
-          </td>
-        </tr>
-      </tbody>
-    </table>
-    <BModal v-model="showConfirmModal" title="Confirmar exclusão" ok-title="Excluir" cancel-title="Cancelar" @ok="confirmarExclusao">
+    <div class="d-flex justify-content-between">
+      <h3>Lista de Lojas</h3>
+      <button class="btn btn-primary mb-3" @click="novo">Novo +</button>
+    </div>
+    <BFormInput
+      id="filter-input"
+      v-model="filter"
+      type="search"
+      placeholder="Pesquisar lojas..."
+    />
+    <BTable
+      ref="complete-table"
+      :sort-internal="true"
+      :items="lojas"
+      :fields="fields"
+      :current-page="paginaAtual"
+      :per-page="perPage"
+      :filter="filter"
+      :responsive="false"
+      :small="true"
+      :multisort="true"
+      class="table table-bordered"
+    >
+    <template #cell(funcionario_id)="{ item }">
+      {{ item.funcionario_nome }}
+    </template>
+    <template #cell(cliente_id)="{ item }">
+      {{ item.cliente_nome }}
+    </template>
+      <template #cell(actions)="{ item }">
+        <BDropdown
+          size="sm"
+          variant="link"
+          toggle-class="text-decoration-none"
+          no-caret
+        >
+          <template #button-content
+            >&#x2630;<span class="visually-hidden">Ações</span>
+          </template>
+          <BDropdownItem @click="editar(item)">Editar</BDropdownItem>
+          <BDropdownItem @click="excluir(item.id)">Excluir</BDropdownItem>
+        </BDropdown>
+      </template>
+    </BTable>
+    <div class="d-flex justify-content-between">
+      <BPagination
+        v-model="paginaAtual"
+        :total-rows="rows"
+        :per-page="perPage"
+        :align="'fill'"
+        class="my-0"
+      />
+
+      <BFormSelect
+        id="per-page-select"
+        v-model="perPage"
+        :options="pageOptions"
+        class="w-auto"
+      />
+    </div>
+    <BModal
+      v-model="showConfirmModal"
+      title="Confirmar exclusão"
+      ok-title="Excluir"
+      cancel-title="Cancelar"
+      @ok="confirmarExclusao"
+    >
       Tem certeza que deseja excluir esta loja?
     </BModal>
     <ToastAlert :message="toastMsg" :type="toastType" />
+    <ModalLoja
+      v-model="showModal"
+      :edicao-loja="editarLoja"
+      :lista-cliente="clientes"
+      :lista-funcionario="funcionarios"
+      @success="carregarESucesso"
+    />
   </div>
 </template>
 
 <script setup lang="ts">
-import { ref, onMounted } from 'vue'
-import { authFetch, getCurrentUser } from '@/api/authFetch'
-import { BModal, BDropdown, BDropdownItem } from 'bootstrap-vue-next'
-import ToastAlert from '@/components/ToastAlert.vue'
-import { useToastAlert } from '@/composables/useToastAlert'
+import { ref, onMounted, computed, useTemplateRef, watch } from "vue";
+import { authFetch, getCurrentUser } from "@/api/authFetch";
+import {
+  BButton,
+  BModal,
+  BDropdown,
+  BDropdownItem,
+  BPagination,
+  BTable,
+  BFormSelect,
+  BTableProviderContext,
+  BTableSortBy,
+  ColorVariant,
+  TableFieldRaw,
+  TableItem,
+  BFormInput,
+} from "bootstrap-vue-next";
+import ToastAlert from "@/components/ToastAlert.vue";
+import { useToastAlert } from "@/composables/useToastAlert";
+import ModalLoja from "./ModalLoja.vue";
 
 interface Loja {
-  id?: number
-  nome: string
-  funcionario_id: number
-  cliente_id: number
-  anuncios_total: number
-  anuncios_realizados: number
-  anuncios_otimizados: number
-  visitas_semana: number
-  produto_mais_visitado: string
-  vendas_total: number
-  funcionario_nome?: string
-  cliente_nome?: string
+  id?: number;
+  nome: string;
+  funcionario_id: number;
+  cliente_id: number;
+  anuncios_total: number;
+  anuncios_realizados: number;
+  anuncios_otimizados: number;
+  visitas_semana: number;
+  produto_mais_visitado: string;
+  vendas_total: number;
+  funcionario_nome?: string;
+  cliente_nome?: string;
 }
 
 interface Funcionario {
-  id: number
-  nome: string
+  id: number;
+  nome: string;
 }
 
 interface Cliente {
-  id: number
-  nome: string
+  id: number;
+  nome: string;
 }
 
-const lojas = ref<Loja[]>([])
-const funcionarios = ref<Funcionario[]>([])
-const clientes = ref<Cliente[]>([])
+const lojas = ref<Loja[]>([]);
+const funcionarios = ref<Funcionario[]>([]);
+const clientes = ref<Cliente[]>([]);
 const form = ref<Loja>({
-  nome: '',
+  nome: "",
   funcionario_id: 0,
   cliente_id: 0,
   anuncios_total: 0,
   anuncios_realizados: 0,
   anuncios_otimizados: 0,
   visitas_semana: 0,
-  produto_mais_visitado: '',
-  vendas_total: 0
+  produto_mais_visitado: "",
+  vendas_total: 0,
+});
+const mostrarForm = ref(false);
+const showConfirmModal = ref(false);
+const idParaExcluir = ref<number | null>(null);
+const showModal = ref(false);
+const editarLoja = ref<Loja | null>(null);
+const { toastMsg, toastType, showToast } = useToastAlert();
+const perPage = ref(5);
+const paginaAtual = ref(1);
+const pageOptions = [
+  { value: 5, text: "5" },
+  { value: 10, text: "10" },
+  { value: 15, text: "15" },
+  { value: lojas.value.length, text: "Todos" },
+];
+const fields: TableFieldRaw<Loja>[] = [
+  {
+    key: "nome",
+    label: "Nome",
+  },
+  {
+    key: "funcionario_id",
+    label: "Funcionário",
+  },
+  {
+    key: "cliente_id",
+    label: "Cliente",
+  },
+  {
+    key: "anuncios_total",
+    label: "Anúncios Total",
+  },
+  {
+    key: "anuncios_realizados",
+    label: "Anúncios Realizados",
+  },
+  {
+    key: "anuncios_otimizados",
+    label: "Anúncios Otimizados",
+  },
+  {
+    key: "visitas_semana",
+    label: "Visitas Semanal",
+  },
+  {
+    key: "produto_mais_visitado",
+    label: "Produto mais visitado",
+  },
+  {
+    key: "vendas_total",
+    label: "Vendas totais",
+  },
+  {
+    key: "actions",
+    label: "Ações",
+    sortable: false,
+  },
+];
+
+const filter = ref("");
+
+const lcFilter = computed(() => filter.value.toLocaleLowerCase());
+
+const filteredItems = computed(() => {
+  if (!filter.value) {
+    return lojas.value;
+  }
+  return lojas.value.filter(
+    (item) =>
+      item.nome.toLowerCase().includes(lcFilter.value) ||
+      item.funcionario_nome?.toLowerCase().includes(lcFilter.value) ||
+      item.cliente_nome?.toLowerCase().includes(lcFilter.value) ||
+      item.anuncios_total?.toString().includes(lcFilter.value) ||
+      item.anuncios_realizados?.toString().includes(lcFilter.value) ||
+      item.anuncios_otimizados?.toString().includes(lcFilter.value) ||
+      item.visitas_semana?.toString().includes(lcFilter.value) ||
+      item.produto_mais_visitado?.toLowerCase().includes(lcFilter.value) ||
+      item.vendas_total?.toString().includes(lcFilter.value)
+  );
+});
+const rows =  computed(() => filteredItems.value.length)
+
+const table = ref()
+
+const provider = (context: Readonly<BTableProviderContext<Loja>>) =>
+  sortItems(filteredItems.value, context.sortBy).slice(
+    (context.currentPage - 1) * context.perPage,
+    context.currentPage * context.perPage
+  )
+
+const sortItems = (items: Loja[], sortBy?: BTableSortBy[]) => {
+  if (!sortBy || sortBy.length === 0) {
+    return items
+  }
+
+  return filteredItems.value.slice().sort((a: Loja, b: Loja) => {
+    for (const sort of sortBy) {
+      if (sort.order === undefined) {
+        continue
+      }
+      const order = sort.order === 'asc' ? 1 : -1
+      const key = sort.key as keyof Loja
+      const aValue = a[key] as string | number
+      const bValue = b[key] as string | number
+      if (aValue < bValue) {
+        return -1 * order
+      } else if (aValue > bValue) {
+        return 1 * order
+      }
+    }
+    return 0
+  })
+}
+
+watch(filter, () => {
+  table.value?.refresh()
 })
-const mostrarForm = ref(false)
-const showConfirmModal = ref(false)
-const idParaExcluir = ref<number | null>(null)
-
-const { toastMsg, toastType, showToast } = useToastAlert()
-
 async function carregar() {
   const user = getCurrentUser();
   let lojasUrl = `https://gerenciamento-lojas-calculadora-precos.onrender.com/lojas`;
-  // Se não for admin, filtra por funcionário
   if (user && user.id && user.id !== 0) {
     lojasUrl += `?funcionario_id=${user.id}`;
   }
   const [lojasResp, funcsResp, clientesResp] = await Promise.all([
     authFetch(lojasUrl),
-    authFetch(`https://gerenciamento-lojas-calculadora-precos.onrender.com/funcionarios`),
-    authFetch(`https://gerenciamento-lojas-calculadora-precos.onrender.com/clientes`)
-  ])
+    authFetch(
+      `https://gerenciamento-lojas-calculadora-precos.onrender.com/funcionarios`
+    ),
+    authFetch(
+      `https://gerenciamento-lojas-calculadora-precos.onrender.com/clientes`
+    ),
+  ]);
   let lojasData = await lojasResp.json();
   // Se não for admin, filtra no frontend também
   if (user && user.id && user.id !== 0) {
     lojasData = lojasData.filter((l: Loja) => l.funcionario_id === user.id);
   }
   lojas.value = lojasData;
-  
-  lojas.value.sort((a, b) => (a.cliente_nome ?? '').localeCompare(b.cliente_nome ?? ''));
+
+  lojas.value.sort((a, b) =>
+    (a.cliente_nome ?? "").localeCompare(b.cliente_nome ?? "")
+  );
   funcionarios.value = await funcsResp.json();
   clientes.value = await clientesResp.json();
+  funcionarios.value.sort((a, b) => a.nome.localeCompare(b.nome));
+  clientes.value.sort((a, b) => a.nome.localeCompare(b.nome));
 }
 
 async function confirmarExclusao() {
   if (idParaExcluir.value !== null) {
-    await authFetch(`https://gerenciamento-lojas-calculadora-precos.onrender.com/lojas/${idParaExcluir.value}`, { method: 'DELETE' });
+    await authFetch(
+      `https://gerenciamento-lojas-calculadora-precos.onrender.com/lojas/${idParaExcluir.value}`,
+      { method: "DELETE" }
+    );
     await carregar();
-    showToast('Loja excluída com sucesso!', 'success')
-    showConfirmModal.value = false
-    idParaExcluir.value = null
+    showToast("Loja excluída com sucesso!", "success");
+    showConfirmModal.value = false;
+    idParaExcluir.value = null;
   }
 }
 
@@ -190,54 +307,70 @@ async function salvar() {
     form.value.funcionario_id = user.id;
   }
   let url = `https://gerenciamento-lojas-calculadora-precos.onrender.com/lojas`;
-  let method = 'POST';
+  let method = "POST";
   if (form.value.id) {
     url = `https://gerenciamento-lojas-calculadora-precos.onrender.com/lojas/${form.value.id}`;
-    method = 'PUT';
+    method = "PUT";
   }
   await authFetch(url, {
     method,
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify(form.value)
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(form.value),
   });
   cancelar();
   await carregar();
-  showToast(form.value.id ? 'Loja atualizada com sucesso!' : 'Loja criada com sucesso!', 'success')
+  showToast(
+    form.value.id ? "Loja atualizada com sucesso!" : "Loja criada com sucesso!",
+    "success"
+  );
 }
 
 function novo() {
-  limpar()
-  mostrarForm.value = true
+  showModal.value = true;
+  editarLoja.value = null;
 }
 
 function editar(l: Loja) {
-  form.value = { ...l }
-  mostrarForm.value = true
+  editarLoja.value = { ...l };
+  showModal.value = true;
 }
 
 function cancelar() {
-  mostrarForm.value = false
-  limpar()
+  mostrarForm.value = false;
+  limpar();
 }
 
 async function excluir(id: number) {
-  idParaExcluir.value = id
-  showConfirmModal.value = true
+  idParaExcluir.value = id;
+  showConfirmModal.value = true;
 }
 
 function limpar() {
   form.value = {
-    nome: '',
+    nome: "",
     funcionario_id: 0,
     cliente_id: 0,
     anuncios_total: 0,
     anuncios_realizados: 0,
     anuncios_otimizados: 0,
     visitas_semana: 0,
-    produto_mais_visitado: '',
-    vendas_total: 0
+    produto_mais_visitado: "",
+    vendas_total: 0,
+  };
+}
+
+function alertConfirmacaoSucesso() {
+  if (editarLoja.value) {
+    showToast("Loja atualizada com sucesso!", "success");
+  } else {
+    showToast("Loja cadastrada com sucesso!", "success");
   }
 }
 
-onMounted(carregar)
+function carregarESucesso() {
+  carregar();
+  alertConfirmacaoSucesso();
+}
+
+onMounted(carregar);
 </script>

@@ -1,12 +1,12 @@
 <template>
   <div v-if="!isLoginRoute">
     <NavBar :corAtual="corAtual" @update:corAtual="setCorAtual" />
-    <BCard v-b-color-mode="corAtual" class="border-0 rounded-0 min-vh-100 min-vw-100">
+    <BCard v-b-color-mode="corAtual" class="border-0 rounded-0 min-vh-100">
       <router-view />
     </BCard>
   </div>
   <div v-else>
-    <BCard v-b-color-mode="corAtual" class="border-0 rounded-0 min-vh-100 min-vw-100">
+    <BCard v-b-color-mode="corAtual" class="border-0 rounded-0 min-vh-100">
       <router-view />
       <div v-if="route.path === '/calculadora-deslogada'">
       <br>
@@ -67,7 +67,5 @@ function acessarLogin() {
 
 onMounted(() => {
   carregarCorAtual()
-  console.log(isLoginRoute)
-  console.log(route.path)
 })
 </script>

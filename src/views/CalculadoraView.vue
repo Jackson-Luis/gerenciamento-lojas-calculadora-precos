@@ -161,12 +161,7 @@ const resultadoVarianteShopee = computed(() => {
   const custoComAdicional = custoComTransicao * (1 + 2 / 100);
   const totalLucro = custoComAdicional * (p / 100);
   const total = custoComAdicional + totalLucro;
-
-    console.log("Custo com frete:", custoComFrete); 
-    console.log("Custo com taxa:", custoComTaxa);
-    console.log("Custo com transição:", custoComTransicao);
-    console.log("Custo com adicional:", custoComAdicional);
-
+  
   return {
     total: total.toFixed(2).replace(".", ","),
     lucro: totalLucro.toFixed(2).replace(".", ","),

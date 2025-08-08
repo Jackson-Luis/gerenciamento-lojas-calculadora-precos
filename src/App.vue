@@ -69,10 +69,7 @@ function acessarLogin() {
 
 function checkAuthToken(token: string): boolean {
   if (!token) return false;
-
-  console.log("Verificando token de autenticação:", token);
-  console.log(jwtDecode(token))
-
+  
   interface DecodedToken {
     id: number;
     nome: string;

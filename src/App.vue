@@ -69,7 +69,7 @@ function acessarLogin() {
 
 function checkAuthToken(token: string): boolean {
   if (!token) return false;
-  
+
   interface DecodedToken {
     id: number;
     nome: string;
@@ -90,7 +90,7 @@ onMounted(() => {
   carregarCorAtual()
   const timeOutLogin = setTimeout(() => {
   const token = localStorage.getItem('token');
-    if (!checkAuthToken(token ?? '')) {
+    if (!checkAuthToken(token ?? '') && route.path !== '/calculadora-deslogada') {
       //localStorage.removeItem('token');
       console.log("Token inválido ou expirado, redirecionando para login");
       acessarLogin();

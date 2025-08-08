@@ -1,12 +1,11 @@
 <template>
   <div class="calculadora-view">
-    <BInputGroup prepend="R$">
+    <BInputGroup prepend="R$" size="md" class="mb-3">
       <BFormInput
         v-model="valor"
         type="number"
         placeholder="Valor do produto em R$"
-        min="0" 
-        size="lg"       
+        min="0"     
       />
     </BInputGroup>
     <br />
@@ -161,7 +160,7 @@ const resultadoVarianteShopee = computed(() => {
   const custoComAdicional = custoComTransicao * (1 + 2 / 100);
   const totalLucro = custoComAdicional * (p / 100);
   const total = custoComAdicional + totalLucro;
-  
+
   return {
     total: total.toFixed(2).replace(".", ","),
     lucro: totalLucro.toFixed(2).replace(".", ","),

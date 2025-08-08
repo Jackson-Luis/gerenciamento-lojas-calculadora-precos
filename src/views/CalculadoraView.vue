@@ -5,7 +5,8 @@
         v-model="valor"
         type="number"
         placeholder="Valor do produto em R$"
-        min="0"     
+        min="0"
+        style="height: 50px"
       />
     </BInputGroup>
     <br />

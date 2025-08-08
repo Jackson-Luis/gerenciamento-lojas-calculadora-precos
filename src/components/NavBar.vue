@@ -47,7 +47,7 @@
 </template>
 
 <script setup lang="ts">
-import { ref, computed, defineEmits, defineProps, onBeforeMount } from "vue";
+import { ref, computed, defineEmits, defineProps } from "vue";
 import {
   vBColorMode,
   BNavbar,
@@ -61,12 +61,6 @@ import {
 import ModalSenha from "@/components/ModalSenha.vue";
 import { getCurrentUser } from "@/api/authFetch";
 import { useToastAlert } from "@/composables/useToastAlert";
-import { useRouter, useRoute } from 'vue-router'
-import {jwtDecode} from 'jwt-decode';
-
-
-const router = useRouter()
-const route = useRoute()
 
 const props = defineProps<{ corAtual: "light" | "dark" }>();
 const emit = defineEmits<{
@@ -92,41 +86,5 @@ function logout() {
   localStorage.removeItem("token");
   localStorage.removeItem("user");
 }
-
-async function checkAuthToken(token: string): Promise<boolean> {
-  if (!token) return false;
-
-  console.log("Verificando token de autenticação:", token);
-  console.log(jwtDecode(token))
-
-  interface DecodedToken {
-    id: number;
-    nome: string;
-    email: string;
-    cargo_superior: boolean;
-    iat: number;
-    exp: number;
-  }
-
-  const decoded: DecodedToken =  jwtDecode(token);
-   console.log(jwtDecode(token))
-  const now = Date.now() / 1000;
-   console.log(jwtDecode(token))
-  return decoded && decoded.exp > now;
-
-}
-
-
-await onBeforeMount(() => {
-  const timeOutLogin = setTimeout(async () => {
-  const token = localStorage.getItem('token');
-    if (!await checkAuthToken(token ?? '')) {
-      //localStorage.removeItem('token');
-      console.log("Token inválido ou expirado, redirecionando para login");
-      router.push({ name: 'login' })
-      clearTimeout(timeOutLogin)
-    }
-  }, 1000)
-})
 </script>
   

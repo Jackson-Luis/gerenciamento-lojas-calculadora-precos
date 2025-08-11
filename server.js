@@ -71,7 +71,9 @@ app.post('/login', async (req, res) => {
     const funcionario = rows[0];
     const senhaCorreta = await bcrypt.compare(senha, funcionario.senha);
 
-
+    console.log('Senha correta:', senhaCorreta);
+    console.log(senha);
+    console.log(funcionario.senha);
 
     if (!senhaCorreta) {
       return res.status(401).json({ error: 'Senha incorreta' });

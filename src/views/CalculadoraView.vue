@@ -1,23 +1,14 @@
 <template>
   <div class="calculadora-view">
-    <BInputGroup prepend="R$" size="md" class="mb-3">
-      <BFormInput
-        v-model="valor"
-        type="number"
-        placeholder="Valor do produto em R$"
-        min="0"
-        style="height: 50px"
-      />
+    <!-- <BInputGroup prepend="R$" size="md" class="mb-3">
+      <BFormInput v-model="valor" type="number" placeholder="Valor do produto em R$" min="0" style="height: 50px" />
+    </BInputGroup> -->
+    <BInputGroup size="lg" prepend="R$">
+      <BFormInput v-model="valor" type="number" placeholder="Valor do produto em R$" min="0" />
     </BInputGroup>
     <br />
-    <BFormSelect
-      v-model="fornecedorSelecionado"
-      :options="fornecedores"
-      class="mb-3"
-      value-field="item"
-      text-field="name"
-      disabled-field="notEnabled"
-    />
+    <BFormSelect v-model="fornecedorSelecionado" :options="fornecedores" class="mb-3" value-field="item"
+      text-field="name" disabled-field="notEnabled" />
     <div class="mt-4">
       <BCardGroup deck>
         <BCard v-b-color-mode="'light'" title="Shopee">
@@ -27,12 +18,8 @@
           <BListGroup>
             <BListGroupItem>
               <div class="d-flex align-items-center justify-content-between">
-                <BFormInput
-                  v-model="porcentagemVarianteShopee"
-                  type="number"
-                  placeholder="Porcentagem variante"
-                  style="width: 250px"
-                />
+                <BFormInput v-model="porcentagemVarianteShopee" type="number" placeholder="Porcentagem variante"
+                  style="width: 250px" />
                 <div v-if="porcentagemVarianteShopee && valor">
                   {{ porcentagemVarianteShopee }}% - R$
                   <span v-if="resultadoVarianteShopee && typeof resultadoVarianteShopee === 'object'">
@@ -40,32 +27,18 @@
                     {{ resultadoVarianteShopee.lucro }}
                   </span>
                 </div>
-                <BButton
-                  v-if="resultadoVarianteShopee"
-                  size="sm"
-                  class="mx-1"
-                  variant="outline-secondary"
-                  @click="copiarValor(String(resultadoVarianteShopee.total))"
-                  >📋</BButton
-                >
+                <BButton v-if="resultadoVarianteShopee" size="sm" class="mx-1" variant="outline-secondary"
+                  @click="copiarValor(String(resultadoVarianteShopee.total))">📋</BButton>
               </div>
             </BListGroupItem>
-            <BListGroupItem
-              v-for="(item, idx) in shopeeCalculos"
-              :key="'shopee-' + idx"
-            >
+            <BListGroupItem v-for="(item, idx) in shopeeCalculos" :key="'shopee-' + idx">
               {{ percentuais[idx] }}% - R$ {{ item?.total }} - Lucro: R$
               {{ item?.lucro }}
               <span class="float-end" v-if="valor">
                 <BTooltip>
                   <template #target>
-                    <BButton
-                      size="sm"
-                      class="mx-1"
-                      variant="outline-secondary"
-                      @click="item && copiarValor(String(item.total))"
-                      >📋</BButton
-                    >
+                    <BButton size="sm" class="mx-1" variant="outline-secondary"
+                      @click="item && copiarValor(String(item.total))">📋</BButton>
                   </template>
                   Copiar valor
                 </BTooltip>
@@ -80,43 +53,26 @@
           <BListGroup>
             <BListGroupItem>
               <div class="d-flex align-items-center justify-content-between">
-                <BFormInput
-                  v-model="porcentagemVarianteAmazon"
-                  type="number"
-                  placeholder="Porcentagem variante"
-                  style="width: 250px"
-                />
-                <div v-if="porcentagemVarianteAmazon && valor && resultadoVarianteAmazon && typeof resultadoVarianteAmazon === 'object'">
+                <BFormInput v-model="porcentagemVarianteAmazon" type="number" placeholder="Porcentagem variante"
+                  style="width: 250px" />
+                <div
+                  v-if="porcentagemVarianteAmazon && valor && resultadoVarianteAmazon && typeof resultadoVarianteAmazon === 'object'">
                   {{ porcentagemVarianteAmazon }}% - R$
                   {{ resultadoVarianteAmazon.total }} - Lucro: R$
                   {{ resultadoVarianteAmazon.lucro }}
                 </div>
-                <BButton
-                  v-if="resultadoVarianteAmazon"
-                  size="sm"
-                  class="mx-1"
-                  variant="outline-secondary"
-                  @click="copiarValor(String(resultadoVarianteAmazon.total))"
-                  >📋</BButton
-                >
+                <BButton v-if="resultadoVarianteAmazon" size="sm" class="mx-1" variant="outline-secondary"
+                  @click="copiarValor(String(resultadoVarianteAmazon.total))">📋</BButton>
               </div>
             </BListGroupItem>
-            <BListGroupItem
-              v-for="(item, idx) in amazonCalculos"
-              :key="'amazon-' + idx"
-            >
+            <BListGroupItem v-for="(item, idx) in amazonCalculos" :key="'amazon-' + idx">
               {{ percentuais[idx] }}% - R$ {{ item?.total }} - Lucro: R$
               {{ item?.lucro }}
               <span class="float-end" v-if="valor">
                 <BTooltip>
                   <template #target>
-                    <BButton
-                      size="sm"
-                      class="mx-1"
-                      variant="outline-secondary"
-                      @click="item && copiarValor(String(item.total))"
-                      >📋</BButton
-                    >
+                    <BButton size="sm" class="mx-1" variant="outline-secondary"
+                      @click="item && copiarValor(String(item.total))">📋</BButton>
                   </template>
                   Copiar valor
                 </BTooltip>
@@ -232,7 +188,7 @@ function calcularMarketplaceShopee(
     const custoComAdicional = custoComTransicao * (1 + adicionalPorcentagem / 100);
     const totalLucro = custoComAdicional * (p / 100);
     const total = custoComAdicional + totalLucro;
-  
+
     return {
       lucro: totalLucro.toFixed(2).replace(".", ","),
       total: total.toFixed(2).replace(".", ","),

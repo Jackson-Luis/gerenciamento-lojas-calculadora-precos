@@ -74,9 +74,9 @@ app.post('/login', async (req, res) => {
 
 
 
-    // if (!senhaCorreta) {
-    //   return res.status(401).json({ error: 'Senha incorreta' });
-    // }
+    if (!senhaCorreta) {
+      return res.status(401).json({ error: 'Senha incorreta' });
+    }
 
     const user = {
       id: funcionario.id,

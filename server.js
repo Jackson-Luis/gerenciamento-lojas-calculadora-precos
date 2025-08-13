@@ -8,7 +8,7 @@ import jwt from 'jsonwebtoken';
 import bcrypt from 'bcrypt';
 import { enviarEmail } from './service/emailService.js';
 import OpenAI from 'openai';
-const cron = require('node-cron');
+import cron from 'node-cron';
 dotenv.config();
 
 

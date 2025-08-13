@@ -16,6 +16,7 @@
   "main": "babel.config.js",
   "dependencies": {
     "@neondatabase/serverless": "^1.0.1",
+    "@nestjs/schedule": "^6.0.0",
     "@vue-email/components": "^0.0.21",
     "@vue-email/render": "^0.0.9",
     "amazon-sp-api": "^1.1.6",
@@ -31,6 +32,7 @@
     "file-saver": "^2.0.5",
     "jsonwebtoken": "^9.0.2",
     "jwt-decode": "^4.0.0",
+    "node-cron": "^4.2.1",
     "node-fetch": "^3.3.2",
     "nodemailer": "^7.0.5",
     "openai": "^5.10.2",
@@ -45,6 +47,7 @@
   "devDependencies": {
     "@babel/plugin-transform-private-methods": "^7.27.1",
     "@types/file-saver": "^2.0.7",
+    "@types/node": "^24.2.1",
     "@typescript-eslint/eslint-plugin": "^5.4.0",
     "@typescript-eslint/parser": "^5.4.0",
     "@vue/cli-plugin-babel": "~5.0.0",

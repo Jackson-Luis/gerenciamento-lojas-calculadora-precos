@@ -8,6 +8,7 @@ import jwt from 'jsonwebtoken';
 import bcrypt from 'bcrypt';
 import { enviarEmail } from './service/emailService.js';
 import OpenAI from 'openai';
+const cron = require('node-cron');
 dotenv.config();
 
 
@@ -42,6 +43,15 @@ function autenticarToken(req, res, next) {
     next();
   });
 }
+
+cron.schedule('*/1 * * * *', async () => {
+    try {
+    const response = await fetch('https://gerenciamento-lojas-calculadora-precos.onrender.com/test-db');
+    console.log(`Ping enviado. Status: ${response.status}`);
+  } catch (error) {
+    console.error('Erro ao pingar o servidor:', error.message);
+  }
+});
 
 app.get('/test-db', async (req, res) => {
   try {
@@ -389,219 +399,198 @@ app.post('/api/preencher', async (req, res) => {
 });
 
 
-
-
-
-
-
-
-///////////// TESTE SANDBOX PARA ACESSÓ Á AMAZON
+///////////// TESTE SANDBOX PARA ACESSO Á AMAZON
 
 // --- imports (adicione se faltar) ---
-import fetch from 'node-fetch';
-import aws4 from 'aws4';
-import crypto from 'crypto';
+// import fetch from 'node-fetch';
+// import aws4 from 'aws4';
 
-// === Helpers de ambiente ===
-const REGION_GROUP = process.env.SPAPI_REGION_GROUP || 'fe'; // na | eu | fe
-const AWS_REGION = process.env.SPAPI_AWS_REGION || 'us-west-2';
-const USE_SANDBOX = String(process.env.USE_SANDBOX || 'true') === 'true';
+// // === Helpers de ambiente ===
+// const REGION_GROUP = process.env.SPAPI_REGION_GROUP || 'fe'; // na | eu | fe
+// const AWS_REGION = process.env.SPAPI_AWS_REGION || 'us-west-2';
+// const USE_SANDBOX = String(process.env.USE_SANDBOX || 'true') === 'true';
 
-// host por group
-const HOSTS = {
-  na: 'sellingpartnerapi-na.amazon.com',
-  eu: 'sellingpartnerapi-eu.amazon.com',
-  fe: 'sellingpartnerapi-fe.amazon.com'
-};
+// // host por group
+// const HOSTS = {
+//   na: 'sellingpartnerapi-na.amazon.com',
+//   eu: 'sellingpartnerapi-eu.amazon.com',
+//   fe: 'sellingpartnerapi-fe.amazon.com'
+// };
 
-function buildHost() {
-  const base = HOSTS[REGION_GROUP] || HOSTS.fe;
-  return USE_SANDBOX ? `sandbox.${base}` : base;
-}
+// function buildHost() {
+//   const base = HOSTS[REGION_GROUP] || HOSTS.fe;
+//   return USE_SANDBOX ? `sandbox.${base}` : base;
+// }
 
-// === 1) Pegar access_token grantless (sem refresh) ===
-async function getGrantlessAccessToken(scopes = ['sellingpartnerapi::migration']) {
-  const params = new URLSearchParams();
-  params.append('grant_type', 'client_credentials');
-  params.append('client_id', process.env.LWA_CLIENT_ID);
-  params.append('client_secret', process.env.LWA_CLIENT_SECRET);
-  params.append('scope', scopes.join(' '));
+// // === 1) Pegar access_token grantless (sem refresh) ===
+// async function getGrantlessAccessToken(scopes = ['sellingpartnerapi::migration']) {
+//   const params = new URLSearchParams();
+//   params.append('grant_type', 'client_credentials');
+//   params.append('client_id', process.env.LWA_CLIENT_ID);
+//   params.append('client_secret', process.env.LWA_CLIENT_SECRET);
+//   params.append('scope', scopes.join(' '));
 
-  const res = await fetch('https://api.amazon.com/auth/o2/token', {
-    method: 'POST',
-    body: params
-  });
-  const data = await res.json();
-  if (!res.ok) {
-    throw new Error(`LWA client_credentials falhou: ${res.status} ${JSON.stringify(data)}`);
-  }
-  return data.access_token; // curto prazo (~1h)
-}
+//   const res = await fetch('https://api.amazon.com/auth/o2/token', {
+//     method: 'POST',
+//     body: params
+//   });
+//   const data = await res.json();
+//   if (!res.ok) {
+//     throw new Error(`LWA client_credentials falhou: ${res.status} ${JSON.stringify(data)}`);
+//   }
+//   return data.access_token; // curto prazo (~1h)
+// }
 
-// === 2) Assinar e chamar SP-API ===
-async function spApiFetch({ path, method = 'GET', query = '', body = null, accessToken }) {
-  const host = buildHost();
-  const urlPath = query ? `${path}?${query}` : path;
+// // === 2) Assinar e chamar SP-API ===
+// async function spApiFetch({ path, method = 'GET', query = '', body = null, accessToken }) {
+//   const host = buildHost();
+//   const urlPath = query ? `${path}?${query}` : path;
 
-  const request = {
-    host,
-    path: urlPath,
-    method,
-    service: 'execute-api',
-    region: AWS_REGION,
-    headers: {
-      'host': host,
-      'content-type': 'application/json',
-      // LWA bearer + x-amz-access-token (ambos aceitos)
-      'authorization': `Bearer ${accessToken}`,
-      'x-amz-access-token': accessToken
-    },
-    body: body ? JSON.stringify(body) : undefined
-  };
+//   const request = {
+//     host,
+//     path: urlPath,
+//     method,
+//     service: 'execute-api',
+//     region: AWS_REGION,
+//     headers: {
+//       'host': host,
+//       'content-type': 'application/json',
+//       // LWA bearer + x-amz-access-token (ambos aceitos)
+//       'authorization': `Bearer ${accessToken}`,
+//       'x-amz-access-token': accessToken
+//     },
+//     body: body ? JSON.stringify(body) : undefined
+//   };
 
-  // assina com AWS SigV4
-  aws4.sign(request, {
-    accessKeyId: process.env.AWS_ACCESS_KEY_ID,
-    secretAccessKey: process.env.AWS_SECRET_ACCESS_KEY
-  });
+//   // assina com AWS SigV4
+//   aws4.sign(request, {
+//     accessKeyId: process.env.AWS_ACCESS_KEY_ID,
+//     secretAccessKey: process.env.AWS_SECRET_ACCESS_KEY
+//   });
 
-  const url = `https://${host}${urlPath}`;
-  const resp = await fetch(url, {
-    method,
-    headers: request.headers,
-    body: request.body
-  });
+//   const url = `https://${host}${urlPath}`;
+//   const resp = await fetch(url, {
+//     method,
+//     headers: request.headers,
+//     body: request.body
+//   });
 
-  const text = await resp.text();
-  let json;
-  try { json = JSON.parse(text); } catch (_) { json = { raw: text }; }
+//   const text = await resp.text();
+//   let json;
+//   try { json = JSON.parse(text); } catch (_) { json = { raw: text }; }
 
-  if (!resp.ok) {
-    throw new Error(`SP-API erro ${resp.status}: ${text}`);
-  }
-  return json;
-}
+//   if (!resp.ok) {
+//     throw new Error(`SP-API erro ${resp.status}: ${text}`);
+//   }
+//   return json;
+// }
 
-// === 3) Util: limpar markdown de JSON da IA ===
-function cleanJsonMarkdown(s) {
-  return (s || '')
-    .replace(/^```json\s*/i, '')
-    .replace(/^```\s*/i, '')
-    .replace(/```$/i, '')
-    .trim();
-}
+// // === 3) Util: limpar markdown de JSON da IA ===
+// function cleanJsonMarkdown(s) {
+//   return (s || '')
+//     .replace(/^```json\s*/i, '')
+//     .replace(/^```\s*/i, '')
+//     .replace(/```$/i, '')
+//     .trim();
+// }
 
-// === 4) Endpoint: IA gera JSON (palavras_chave, titulos, descricoes, bullet_points) ===
-app.post('/api/ia/generate', async (req, res) => {
-  const { productPrompt } = req.body || {};
-  if (!productPrompt) return res.status(400).json({ error: 'productPrompt é obrigatório' });
+// // === 4) Endpoint: IA gera JSON (palavras_chave, titulos, descricoes, bullet_points) ===
+// app.post('/api/ia/generate', async (req, res) => {
+//   const { productPrompt } = req.body || {};
+//   if (!productPrompt) return res.status(400).json({ error: 'productPrompt é obrigatório' });
 
-  try {
-    const completion = await openai.chat.completions.create({
-      model: "gpt-4.1-nano-2025-04-14",
-      messages: [{
-        role: 'user',
-        content: `Com base nesse prompt: produto ["${productPrompt}"]
-          tarefa:
-          1) gere JSON com: "palavras_chave" (separadas por ponto e vírgula), "titulos" (>=130 chars), "descricoes" (~120-200 palavras),
-          "bullet_points" (objeto com bulletpoint_um..bulletpoint_cinco).
-          Regras:
-          - linguagem persuasiva e focada em SEO
-          - NÃO use markdown (sem \`\`\`)
-          - retorne APENAS JSON`
-      }]
-    });
+//   try {
+//     const completion = await openai.chat.completions.create({
+//       model: "gpt-4.1-nano-2025-04-14",
+//       messages: [{
+//         role: 'user',
+//         content: `Com base nesse prompt: produto ["${productPrompt}"]
+//           tarefa:
+//           1) gere JSON com: "palavras_chave" (separadas por ponto e vírgula), "titulos" (>=130 chars), "descricoes" (~120-200 palavras),
+//           "bullet_points" (objeto com bulletpoint_um..bulletpoint_cinco).
+//           Regras:
+//           - linguagem persuasiva e focada em SEO
+//           - NÃO use markdown (sem \`\`\`)
+//           - retorne APENAS JSON`
+//       }]
+//     });
 
-    const raw = completion.choices[0]?.message?.content || '';
-    const texto = cleanJsonMarkdown(raw);
-    const json = JSON.parse(texto);
+//     const raw = completion.choices[0]?.message?.content || '';
+//     const texto = cleanJsonMarkdown(raw);
+//     const json = JSON.parse(texto);
 
-    res.json({ ok: true, ia: json, raw: texto });
-  } catch (err) {
-    console.error(err);
-    res.status(500).json({ error: 'Falha ao gerar JSON da IA', detail: err.message });
-  }
-});
+//     res.json({ ok: true, ia: json, raw: texto });
+//   } catch (err) {
+//     console.error(err);
+//     res.status(500).json({ error: 'Falha ao gerar JSON da IA', detail: err.message });
+//   }
+// });
 
-// === 5) Endpoint: IA + chamada grantless no sandbox (validação de credenciais) ===
-// Observação: sem refresh_token NÃO conseguimos criar listing real.
-// Aqui validamos credenciais chamando o endpoint grantless "sellers/marketplaceParticipations".
-app.post('/api/ia/sandbox-check', async (req, res) => {
-  const { productPrompt } = req.body || {};
-  if (!productPrompt) return res.status(400).json({ error: 'productPrompt é obrigatório' });
+// // === 5) Endpoint: IA + chamada grantless no sandbox (validação de credenciais) ===
+// // Observação: sem refresh_token NÃO conseguimos criar listing real.
+// // Aqui validamos credenciais chamando o endpoint grantless "sellers/marketplaceParticipations".
+// app.post('/api/ia/sandbox-check', async (req, res) => {
+//   const { productPrompt } = req.body || {};
+//   if (!productPrompt) return res.status(400).json({ error: 'productPrompt é obrigatório' });
 
-  try {
-    // 5.1 Gera conteúdo via IA
-    const completion = await openai.chat.completions.create({
-      model: "gpt-4.1-nano-2025-04-14",
-      messages: [{
-        role: 'user',
-        content: `Com base nesse prompt: produto ["${productPrompt}"]
-          tarefa:
-          1) gere JSON com: "palavras_chave" (separadas por ponto e vírgula), "titulos" (>=130 chars), "descricoes" (~120-200 palavras),
-          "bullet_points" (objeto com bulletpoint_um..bulletpoint_cinco).
-          Regras:
-          - linguagem persuasiva e focada em SEO
-          - NÃO use markdown (sem \`\`\`)
-          - retorne APENAS JSON`
-      }]
-    });
+//   try {
+//     // 5.1 Gera conteúdo via IA
+//     const completion = await openai.chat.completions.create({
+//       model: "gpt-4.1-nano-2025-04-14",
+//       messages: [{
+//         role: 'user',
+//         content: `Com base nesse prompt: produto ["${productPrompt}"]
+//           tarefa:
+//           1) gere JSON com: "palavras_chave" (separadas por ponto e vírgula), "titulos" (>=130 chars), "descricoes" (~120-200 palavras),
+//           "bullet_points" (objeto com bulletpoint_um..bulletpoint_cinco).
+//           Regras:
+//           - linguagem persuasiva e focada em SEO
+//           - NÃO use markdown (sem \`\`\`)
+//           - retorne APENAS JSON`
+//       }]
+//     });
 
-    const raw = completion.choices[0]?.message?.content || '';
-    const texto = cleanJsonMarkdown(raw);
-    const iaJson = JSON.parse(texto);
+//     const raw = completion.choices[0]?.message?.content || '';
+//     const texto = cleanJsonMarkdown(raw);
+//     const iaJson = JSON.parse(texto);
 
-    // map básico
-    const keywords = (iaJson.palavras_chave || '')
-      .split(/[;,\n]/).map(s => s.trim()).filter(Boolean);
-    const title = iaJson.titulos || '';
-    const description = iaJson.descricoes || '';
-    const bullets = Object.values(iaJson.bullet_points || {}).filter(Boolean);
+//     // map básico
+//     const keywords = (iaJson.palavras_chave || '')
+//       .split(/[;,\n]/).map(s => s.trim()).filter(Boolean);
+//     const title = iaJson.titulos || '';
+//     const description = iaJson.descricoes || '';
+//     const bullets = Object.values(iaJson.bullet_points || {}).filter(Boolean);
 
-    // 5.2 Pega access token grantless para o endpoint de sellers
-    const accessToken = await getGrantlessAccessToken(['sellingpartnerapi::notifications']);
+//     // 5.2 Pega access token grantless para o endpoint de sellers
+//     const accessToken = await getGrantlessAccessToken(['sellingpartnerapi::notifications']);
 
 
-    // 5.3 Chama endpoint grantless (Notifications) para validar assinatura/credenciais
-    const notifResp = await spApiFetch({
-      path: '/notifications/v1/destinations',
-      method: 'GET',
-      accessToken
-    });
+//     // 5.3 Chama endpoint grantless (Notifications) para validar assinatura/credenciais
+//     const notifResp = await spApiFetch({
+//       path: '/notifications/v1/destinations',
+//       method: 'GET',
+//       accessToken
+//     });
 
-    res.json({
-      ok: true,
-      ia_mapped: {
-        title,
-        description,
-        bullets,
-        keywords
-      },
-      spapi_check: notifResp,
-      note: 'Fluxo grantless sandbox OK. Para criar listing de verdade, será necessário usar refresh_token e endpoints de listings.'
-    });
-  } catch (err) {
-    console.error(err);
-    res.status(500).json({ error: 'Falha no sandbox-check', detail: err.message });
-  }
-});
+//     res.json({
+//       ok: true,
+//       ia_mapped: {
+//         title,
+//         description,
+//         bullets,
+//         keywords
+//       },
+//       spapi_check: notifResp,
+//       note: 'Fluxo grantless sandbox OK. Para criar listing de verdade, será necessário usar refresh_token e endpoints de listings.'
+//     });
+//   } catch (err) {
+//     console.error(err);
+//     res.status(500).json({ error: 'Falha no sandbox-check', detail: err.message });
+//   }
+// });
 
 
 //////////////////////////////
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 
 
 app.get('/health', (req, res) => {

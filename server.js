@@ -885,6 +885,24 @@ app.get('/callback', async (req, res) => {
   }
 });
 
+
+// rota temporária só p/ diagnóstico
+app.get('/diag/spapi-grantless-prod', async (req, res) => {
+  try {
+    const accessToken = await getGrantlessAccessToken(['sellingpartnerapi::notifications']);
+    const r = await spApiFetch({
+      path: '/notifications/v1/destinations',
+      method: 'GET',
+      accessToken,
+      useSandbox: false
+    });
+    res.json({ ok: true, r });
+  } catch (e) {
+    res.status(500).json({ ok: false, detail: String(e.message || e) });
+  }
+});
+
+
 //////////////////////////////
 
 app.get("/health", (req, res) => {

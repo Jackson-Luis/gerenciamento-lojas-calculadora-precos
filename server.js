@@ -1,5 +1,5 @@
 
-import dotenv, { decrypt } from 'dotenv';
+import dotenv from 'dotenv';
 import express from 'express';
 import cors from 'cors';
 import pkg from 'pg';
@@ -9,15 +9,15 @@ import bcrypt from 'bcrypt';
 import { enviarEmail } from './service/emailService.js';
 import OpenAI from 'openai';
 import cron from 'node-cron';
-dotenv.config();
+import aws4 from 'aws4';         // <- necessário para assinatura SigV4
+import fetch from 'node-fetch';  // <- para compatibilidade (Node < 18)
 
+dotenv.config();
 
 const app = express();
 const port = process.env.PORT || 3001;
 const SECRET = process.env.JWT_SECRET;
-const openai = new OpenAI({
-  apiKey: process.env.OPENAI_API_KEY_TESTE,
-});
+const openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY_TESTE });
 
 const pool = new Pool({
   connectionString: process.env.DATABASE_URL,
@@ -45,7 +45,7 @@ function autenticarToken(req, res, next) {
 }
 
 cron.schedule('*/1 * * * *', async () => {
-    try {
+  try {
     const response = await fetch('https://gerenciamento-lojas-calculadora-precos.onrender.com/test-db');
     console.log(`Ping enviado. Status: ${response.status}`);
   } catch (error) {
@@ -80,7 +80,6 @@ app.post('/login', async (req, res) => {
 
     const funcionario = rows[0];
     const senhaCorreta = await bcrypt.compare(senha, funcionario.senha);
-    console.log(senhaCorreta);
 
     if (!senhaCorreta) {
       return res.status(401).json({ error: 'Senha incorreta' });
@@ -93,8 +92,8 @@ app.post('/login', async (req, res) => {
       cargo_superior: funcionario.cargo_superior
     };
 
-    const SECRET = process.env.JWT_SECRET || 'chave_muito_secreta';
-    const token = jwt.sign(user, SECRET, { expiresIn: '1h' });
+    const SECRET_LOCAL = process.env.JWT_SECRET || 'chave_muito_secreta';
+    const token = jwt.sign(user, SECRET_LOCAL, { expiresIn: '1h' });
 
     return res.json({ token, user });
   } catch (err) {
@@ -317,12 +316,10 @@ app.delete('/lojas/:id', autenticarToken, async (req, res) => {
 });
 
 app.post('/api/cadastrar', async (req, res) => {
-  const { nome, email } = req.body
-
-  await enviarEmail(email, nome)
-
-  res.json({ ok: true, message: 'Cadastro completo e e-mail enviado!' })
-})
+  const { nome, email } = req.body;
+  await enviarEmail(email, nome);
+  res.json({ ok: true, message: 'Cadastro completo e e-mail enviado!' });
+});
 
 app.post('/enviar-email', async (req, res) => {
   try {
@@ -333,7 +330,6 @@ app.post('/enviar-email', async (req, res) => {
     }
 
     await enviarEmail(para, html);
-
     res.json({ ok: true, message: 'E-mail enviado!' });
   } catch (err) {
     console.error('Erro ao enviar email:', err);
@@ -356,9 +352,14 @@ app.get('/verificar-email', async (req, res) => {
 });
 
 
+/**
+ * /api/preencher — gera conteúdo de listagem via IA (JSON)
+ * Mantém a estrutura original, porém com try/catch mais robusto
+ * e sem referência a variável "completion" fora do escopo.
+ */
 app.post('/api/preencher', async (req, res) => {
   const { prompt } = req.body;
-
+  let texto = '';
   try {
     const completion = await openai.chat.completions.create({
       model: "gpt-4.1-nano-2025-04-14",
@@ -382,8 +383,8 @@ app.post('/api/preencher', async (req, res) => {
       ],
     });
 
-    const texto = completion.choices[0].message.content;
-    const jsonLimpo = texto
+    texto = completion.choices[0]?.message?.content || '';
+    const jsonLimpo = String(texto)
       .replace(/^```json\s*/i, '')
       .replace(/```$/, '')
       .trim();
@@ -392,203 +393,228 @@ app.post('/api/preencher', async (req, res) => {
     res.json(json);
   } catch (err) {
     console.error('Erro ao fazer parse do JSON:', err.message);
-    // eslint-disable-next-line no-undef
-    console.log('Conteúdo retornado:', completion.choices[0].message.content);
-    res.status(500).json({ error: 'Erro ao interpretar JSON retornado pela IA.' });
+    res.status(500).json({ error: 'Erro ao interpretar JSON retornado pela IA.', raw: texto });
   }
 });
 
 
 ///////////// TESTE SANDBOX PARA ACESSO Á AMAZON
 
-// --- imports (adicione se faltar) ---
-// import fetch from 'node-fetch';
-// import aws4 from 'aws4';
+// === Helpers de ambiente ===
+const REGION_GROUP = process.env.SPAPI_REGION_GROUP || 'na'; // na | eu | fe  -> BR = na
+const AWS_REGION = process.env.SPAPI_AWS_REGION || 'us-east-1'; // BR = us-east-1
+const USE_SANDBOX_ENV = String(process.env.USE_SANDBOX || 'false') === 'true';
 
-// // === Helpers de ambiente ===
-// const REGION_GROUP = process.env.SPAPI_REGION_GROUP || 'fe'; // na | eu | fe
-// const AWS_REGION = process.env.SPAPI_AWS_REGION || 'us-west-2';
-// const USE_SANDBOX = String(process.env.USE_SANDBOX || 'true') === 'true';
+// host por group
+const HOSTS = {
+  na: 'sellingpartnerapi-na.amazon.com',
+  eu: 'sellingpartnerapi-eu.amazon.com',
+  fe: 'sellingpartnerapi-fe.amazon.com'
+};
 
-// // host por group
-// const HOSTS = {
-//   na: 'sellingpartnerapi-na.amazon.com',
-//   eu: 'sellingpartnerapi-eu.amazon.com',
-//   fe: 'sellingpartnerapi-fe.amazon.com'
-// };
+function hostBySandbox(useSandbox) {
+  const base = HOSTS[REGION_GROUP] || HOSTS.na;
+  const effectiveSandbox = typeof useSandbox === 'boolean' ? useSandbox : USE_SANDBOX_ENV;
+  return effectiveSandbox ? `sandbox.${base}` : base;
+}
 
-// function buildHost() {
-//   const base = HOSTS[REGION_GROUP] || HOSTS.fe;
-//   return USE_SANDBOX ? `sandbox.${base}` : base;
-// }
+// === LWA TOKENS ===
+async function getGrantlessAccessToken(scopes = ['sellingpartnerapi::notifications']) {
+  const params = new URLSearchParams();
+  params.append('grant_type', 'client_credentials');
+  params.append('client_id', process.env.LWA_CLIENT_ID);
+  params.append('client_secret', process.env.LWA_CLIENT_SECRET);
+  params.append('scope', scopes.join(' '));
 
-// // === 1) Pegar access_token grantless (sem refresh) ===
-// async function getGrantlessAccessToken(scopes = ['sellingpartnerapi::migration']) {
-//   const params = new URLSearchParams();
-//   params.append('grant_type', 'client_credentials');
-//   params.append('client_id', process.env.LWA_CLIENT_ID);
-//   params.append('client_secret', process.env.LWA_CLIENT_SECRET);
-//   params.append('scope', scopes.join(' '));
+  const res = await fetch('https://api.amazon.com/auth/o2/token', { method: 'POST', body: params });
+  const data = await res.json();
+  if (!res.ok) {
+    throw new Error(`LWA client_credentials falhou: ${res.status} ${JSON.stringify(data)}`);
+  }
+  return data.access_token; // ~1h
+}
 
-//   const res = await fetch('https://api.amazon.com/auth/o2/token', {
-//     method: 'POST',
-//     body: params
-//   });
-//   const data = await res.json();
-//   if (!res.ok) {
-//     throw new Error(`LWA client_credentials falhou: ${res.status} ${JSON.stringify(data)}`);
-//   }
-//   return data.access_token; // curto prazo (~1h)
-// }
+async function getAccessTokenWithRefresh() {
+  const params = new URLSearchParams();
+  params.append('grant_type', 'refresh_token');
+  params.append('refresh_token', process.env.LWA_REFRESH_TOKEN);
+  params.append('client_id', process.env.LWA_CLIENT_ID);
+  params.append('client_secret', process.env.LWA_CLIENT_SECRET);
 
-// // === 2) Assinar e chamar SP-API ===
-// async function spApiFetch({ path, method = 'GET', query = '', body = null, accessToken }) {
-//   const host = buildHost();
-//   const urlPath = query ? `${path}?${query}` : path;
+  const res = await fetch('https://api.amazon.com/auth/o2/token', { method: 'POST', body: params });
+  const data = await res.json();
+  if (!res.ok) {
+    throw new Error(`LWA refresh_token falhou: ${res.status} ${JSON.stringify(data)}`);
+  }
+  return data.access_token; // ~1h
+}
 
-//   const request = {
-//     host,
-//     path: urlPath,
-//     method,
-//     service: 'execute-api',
-//     region: AWS_REGION,
-//     headers: {
-//       'host': host,
-//       'content-type': 'application/json',
-//       // LWA bearer + x-amz-access-token (ambos aceitos)
-//       'authorization': `Bearer ${accessToken}`,
-//       'x-amz-access-token': accessToken
-//     },
-//     body: body ? JSON.stringify(body) : undefined
-//   };
+// === Assinar e chamar SP-API ===
+async function spApiFetch({ path, method = 'GET', query = '', body = null, accessToken, useSandbox }) {
+  const host = hostBySandbox(useSandbox);
+  const urlPath = query ? `${path}?${query}` : path;
 
-//   // assina com AWS SigV4
-//   aws4.sign(request, {
-//     accessKeyId: process.env.AWS_ACCESS_KEY_ID,
-//     secretAccessKey: process.env.AWS_SECRET_ACCESS_KEY
-//   });
+  const request = {
+    host,
+    path: urlPath,
+    method,
+    service: 'execute-api',
+    region: AWS_REGION,
+    headers: {
+      host,
+      'content-type': 'application/json',
+      'x-amz-access-token': accessToken
+    },
+    body: body ? JSON.stringify(body) : undefined
+  };
 
-//   const url = `https://${host}${urlPath}`;
-//   const resp = await fetch(url, {
-//     method,
-//     headers: request.headers,
-//     body: request.body
-//   });
+  aws4.sign(request, {
+    accessKeyId: process.env.AWS_ACCESS_KEY_ID,
+    secretAccessKey: process.env.AWS_SECRET_ACCESS_KEY
+    // sessionToken: process.env.AWS_SESSION_TOKEN, // se usar STS
+  });
 
-//   const text = await resp.text();
-//   let json;
-//   try { json = JSON.parse(text); } catch (_) { json = { raw: text }; }
+  const url = `https://${host}${urlPath}`;
+  const resp = await fetch(url, { method, headers: request.headers, body: request.body });
 
-//   if (!resp.ok) {
-//     throw new Error(`SP-API erro ${resp.status}: ${text}`);
-//   }
-//   return json;
-// }
+  const text = await resp.text();
+  let json;
+  try { json = JSON.parse(text); } catch { json = { raw: text }; }
 
-// // === 3) Util: limpar markdown de JSON da IA ===
-// function cleanJsonMarkdown(s) {
-//   return (s || '')
-//     .replace(/^```json\s*/i, '')
-//     .replace(/^```\s*/i, '')
-//     .replace(/```$/i, '')
-//     .trim();
-// }
+  if (!resp.ok) {
+    throw new Error(`SP-API erro ${resp.status}: ${text}`);
+  }
+  return json;
+}
 
-// // === 4) Endpoint: IA gera JSON (palavras_chave, titulos, descricoes, bullet_points) ===
-// app.post('/api/ia/generate', async (req, res) => {
-//   const { productPrompt } = req.body || {};
-//   if (!productPrompt) return res.status(400).json({ error: 'productPrompt é obrigatório' });
+// === Util: mesmo "content" do /api/preencher ===
+async function gerarConteudoIAComMesmoMolde(prompt) {
+  const completion = await openai.chat.completions.create({
+    model: "gpt-4.1-nano-2025-04-14",
+    messages: [
+      {
+        role: 'user',
+        content: `Com base nesse prompt: produto ["${prompt}"]
+                tarefas:
+                1. pesquise as palavras chave mais relevantes na busca do produto e as cite espaçadas por (;) e que seja no máximo 500 caracteres
+                2. crie um titulo para anuncios, utilizando apenas as palavras chave com o limite minimo de 130 caracteres cada
+                3. crie uma descrição com cerca de 120 palavras, lembre de ser convincente e incluir as especificações do produto
+                4. crie 5 bullet points sofisticados para cada anuncio
+                observações
+                * Utilize linguagem persuasiva e focada em SEO.
+                * Adapte o tom de voz e a linguagem ao público-alvo do produto.
+                * Mantenha a formatação clara e organizada para facilitar a leitura e a aplicação das informações.
+                * gere em formato JSON, com os campos: "palavras_chave", "titulos", "descricoes", "bullet_points"
+                * dentro de bullet_points, deve ter 5 bullet points distintos no máximo
+                * em bulletpoints deve ser também um objeto com cada como bulletpoint_1, e o valor como o bullet point e assim por diante`,
+      },
+    ],
+  });
 
-//   try {
-//     const completion = await openai.chat.completions.create({
-//       model: "gpt-4.1-nano-2025-04-14",
-//       messages: [{
-//         role: 'user',
-//         content: `Com base nesse prompt: produto ["${productPrompt}"]
-//           tarefa:
-//           1) gere JSON com: "palavras_chave" (separadas por ponto e vírgula), "titulos" (>=130 chars), "descricoes" (~120-200 palavras),
-//           "bullet_points" (objeto com bulletpoint_um..bulletpoint_cinco).
-//           Regras:
-//           - linguagem persuasiva e focada em SEO
-//           - NÃO use markdown (sem \`\`\`)
-//           - retorne APENAS JSON`
-//       }]
-//     });
+  const bruto = completion.choices[0]?.message?.content || '';
+  const limpo = String(bruto).replace(/^```json\s*/i, '').replace(/```$/, '').trim();
+  return JSON.parse(limpo);
+}
 
-//     const raw = completion.choices[0]?.message?.content || '';
-//     const texto = cleanJsonMarkdown(raw);
-//     const json = JSON.parse(texto);
+// === 4) Endpoint: IA gera JSON (mantido, mas usando o helper) ===
+app.post('/api/ia/generate', async (req, res) => {
+  const { productPrompt } = req.body || {};
+  if (!productPrompt) return res.status(400).json({ error: 'productPrompt é obrigatório' });
 
-//     res.json({ ok: true, ia: json, raw: texto });
-//   } catch (err) {
-//     console.error(err);
-//     res.status(500).json({ error: 'Falha ao gerar JSON da IA', detail: err.message });
-//   }
-// });
+  try {
+    const json = await gerarConteudoIAComMesmoMolde(productPrompt);
+    res.json({ ok: true, ia: json });
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: 'Falha ao gerar JSON da IA', detail: err.message });
+  }
+});
 
-// // === 5) Endpoint: IA + chamada grantless no sandbox (validação de credenciais) ===
-// // Observação: sem refresh_token NÃO conseguimos criar listing real.
-// // Aqui validamos credenciais chamando o endpoint grantless "sellers/marketplaceParticipations".
-// app.post('/api/ia/sandbox-check', async (req, res) => {
-//   const { productPrompt } = req.body || {};
-//   if (!productPrompt) return res.status(400).json({ error: 'productPrompt é obrigatório' });
+// === 5) Endpoint sandbox-check (grantless + IA) — mantém a ideia e melhora ===
+app.post('/api/ia/sandbox-check', async (req, res) => {
+  const { productPrompt } = req.body || {};
+  if (!productPrompt) return res.status(400).json({ error: 'productPrompt é obrigatório' });
 
-//   try {
-//     // 5.1 Gera conteúdo via IA
-//     const completion = await openai.chat.completions.create({
-//       model: "gpt-4.1-nano-2025-04-14",
-//       messages: [{
-//         role: 'user',
-//         content: `Com base nesse prompt: produto ["${productPrompt}"]
-//           tarefa:
-//           1) gere JSON com: "palavras_chave" (separadas por ponto e vírgula), "titulos" (>=130 chars), "descricoes" (~120-200 palavras),
-//           "bullet_points" (objeto com bulletpoint_um..bulletpoint_cinco).
-//           Regras:
-//           - linguagem persuasiva e focada em SEO
-//           - NÃO use markdown (sem \`\`\`)
-//           - retorne APENAS JSON`
-//       }]
-//     });
+  try {
+    const iaJson = await gerarConteudoIAComMesmoMolde(productPrompt);
 
-//     const raw = completion.choices[0]?.message?.content || '';
-//     const texto = cleanJsonMarkdown(raw);
-//     const iaJson = JSON.parse(texto);
+    const keywords = (iaJson.palavras_chave || '')
+      .split(/[;,\n]/).map(s => s.trim()).filter(Boolean);
+    const title = iaJson.titulos || '';
+    const description = iaJson.descricoes || '';
+    const bullets = Object.values(iaJson.bullet_points || {}).filter(Boolean);
 
-//     // map básico
-//     const keywords = (iaJson.palavras_chave || '')
-//       .split(/[;,\n]/).map(s => s.trim()).filter(Boolean);
-//     const title = iaJson.titulos || '';
-//     const description = iaJson.descricoes || '';
-//     const bullets = Object.values(iaJson.bullet_points || {}).filter(Boolean);
+    // Grantless em SANDBOX: notifications
+    const accessToken = await getGrantlessAccessToken(['sellingpartnerapi::notifications']);
+    const notifResp = await spApiFetch({
+      path: '/notifications/v1/destinations',
+      method: 'GET',
+      accessToken,
+      useSandbox: True
+    });
 
-//     // 5.2 Pega access token grantless para o endpoint de sellers
-//     const accessToken = await getGrantlessAccessToken(['sellingpartnerapi::notifications']);
+    res.json({
+      ok: true,
+      ia_mapped: { title, description, bullets, keywords },
+      spapi_check: notifResp,
+      note: 'Fluxo grantless SANDBOX OK.'
+    });
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: 'Falha no sandbox-check', detail: err.message });
+  }
+});
 
 
-//     // 5.3 Chama endpoint grantless (Notifications) para validar assinatura/credenciais
-//     const notifResp = await spApiFetch({
-//       path: '/notifications/v1/destinations',
-//       method: 'GET',
-//       accessToken
-//     });
+// === NOVAS ROTAS SOLICITADAS ===
 
-//     res.json({
-//       ok: true,
-//       ia_mapped: {
-//         title,
-//         description,
-//         bullets,
-//         keywords
-//       },
-//       spapi_check: notifResp,
-//       note: 'Fluxo grantless sandbox OK. Para criar listing de verdade, será necessário usar refresh_token e endpoints de listings.'
-//     });
-//   } catch (err) {
-//     console.error(err);
-//     res.status(500).json({ error: 'Falha no sandbox-check', detail: err.message });
-//   }
-// });
+// 6) SANDBOX — processa conteúdo IA e valida SP-API (grantless)
+app.post('/api/amazon/sandbox/process', async (req, res) => {
+  const { prompt } = req.body || {};
+  if (!prompt) return res.status(400).json({ error: 'prompt é obrigatório' });
 
+  try {
+    const iaJson = await gerarConteudoIAComMesmoMolde(prompt);
+    const accessToken = await getGrantlessAccessToken(['sellingpartnerapi::notifications']);
+
+    // Exemplo de chamada segura no sandbox
+    const sp = await spApiFetch({
+      path: '/notifications/v1/destinations',
+      method: 'GET',
+      accessToken,
+      useSandbox: True
+    });
+
+    res.json({ ok: true, environment: 'SANDBOX', ia: iaJson, spapi_check: sp });
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: 'Falha em /api/amazon/sandbox/process', detail: err.message });
+  }
+});
+
+// 7) PRODUÇÃO — processa conteúdo IA e valida SP-API (autorizado via refresh_token)
+app.post('/api/amazon/prod/process', async (req, res) => {
+  const { prompt } = req.body || {};
+  if (!prompt) return res.status(400).json({ error: 'prompt é obrigatório' });
+
+  try {
+    const iaJson = await gerarConteudoIAComMesmoMolde(prompt);
+    const accessToken = await getAccessTokenWithRefresh();
+
+    // Exemplo seguro em produção: sellers participations (autorizado)
+    const sellers = await spApiFetch({
+      path: '/sellers/v1/marketplaceParticipations',
+      method: 'GET',
+      accessToken,
+      useSandbox: False
+    });
+
+    res.json({ ok: true, environment: 'PRODUCTION', ia: iaJson, spapi_check: sellers });
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: 'Falha em /api/amazon/prod/process', detail: err.message });
+  }
+});
 
 //////////////////////////////
 
@@ -597,11 +623,12 @@ app.get('/health', (req, res) => {
   res.json({ status: 'ok', timestamp: new Date() });
 });
 
-app.use((err, req, res) => {
+// Middleware de erro (assinatura correta)
+app.use((err, req, res, next) => {
   console.error('Erro não tratado:', err);
   res.status(500).json({ error: 'Erro interno do servidor' });
 });
 
-app.listen(port, () => {
-  console.log(`Servidor rodando na porta ${port}`);
+app.listen(process.env.PORT || 3001, () => {
+  console.log(`Servidor rodando na porta ${process.env.PORT || 3001}`);
 });

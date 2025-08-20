@@ -1,262 +1,378 @@
-
-import dotenv from 'dotenv';
-import express from 'express';
-import cors from 'cors';
-import pkg from 'pg';
+import dotenv from "dotenv";
+import express from "express";
+import cors from "cors";
+import pkg from "pg";
 const { Pool } = pkg;
-import jwt from 'jsonwebtoken';
-import bcrypt from 'bcrypt';
-import { enviarEmail } from './service/emailService.js';
-import OpenAI from 'openai';
-import cron from 'node-cron';
-import aws4 from 'aws4';         // <- necessário para assinatura SigV4
-import fetch from 'node-fetch';  // <- para compatibilidade (Node < 18)
+import jwt from "jsonwebtoken";
+import bcrypt from "bcrypt";
+import { enviarEmail } from "./service/emailService.js";
+import OpenAI from "openai";
+import cron from "node-cron";
+import aws4 from "aws4"; // <- necessário para assinatura SigV4
+import fetch from "node-fetch"; // <- para compatibilidade (Node < 18)
 
 dotenv.config();
 
 const app = express();
 const port = process.env.PORT || 3001;
-const SECRET = process.env.JWT_SECRET;
+const SECRET = process.env.JWT_SECRET || "chave_muito_secreta";
 const openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY_TESTE });
 
 const pool = new Pool({
   connectionString: process.env.DATABASE_URL,
-  ssl: process.env.NODE_ENV === 'production' ? { rejectUnauthorized: false } : false
+  ssl:
+    process.env.NODE_ENV === "production"
+      ? { rejectUnauthorized: false }
+      : false,
 });
 
-app.use(cors({
-  origin: (origin, callback) => callback(null, true),
-  credentials: true,
-  methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
-  allowedHeaders: ['Content-Type', 'Authorization']
-}));
+app.use(
+  cors({
+    origin: [
+      "https://jackson-luis.github.io",
+      "https://gerenciamento-lojas-calculadora-precos.onrender.com", // se consumir a si mesmo
+    ],
+    credentials: true,
+    methods: ["GET", "POST", "PUT", "DELETE", "OPTIONS"],
+    allowedHeaders: ["Content-Type", "Authorization"],
+  })
+);
 app.use(express.json());
 
 function autenticarToken(req, res, next) {
-  const authHeader = req.headers['authorization'];
-  const token = authHeader && authHeader.split(' ')[1];
-  if (!token) return res.status(401).json({ error: 'Token não fornecido' });
+  const authHeader = req.headers["authorization"];
+  const token = authHeader && authHeader.split(" ")[1];
+  if (!token) return res.status(401).json({ error: "Token não fornecido" });
 
   jwt.verify(token, SECRET, (err, user) => {
-    if (err) return res.status(403).json({ error: 'Token inválido' });
+    if (err) return res.status(403).json({ error: "Token inválido" });
     req.user = user;
     next();
   });
 }
 
-cron.schedule('*/1 * * * *', async () => {
+cron.schedule("*/1 * * * *", async () => {
   try {
-    const response = await fetch('https://gerenciamento-lojas-calculadora-precos.onrender.com/test-db');
+    const response = await fetch(
+      "https://gerenciamento-lojas-calculadora-precos.onrender.com/test-db"
+    );
     console.log(`Ping enviado. Status: ${response.status}`);
   } catch (error) {
-    console.error('Erro ao pingar o servidor:', error.message);
+    console.error("Erro ao pingar o servidor:", error.message);
   }
 });
 
-app.get('/test-db', async (req, res) => {
+app.get("/test-db", async (req, res) => {
   try {
-    const { rows } = await pool.query('SELECT NOW()');
+    const { rows } = await pool.query("SELECT NOW()");
     res.json(rows);
   } catch (err) {
-    res.status(500).json({ error: 'Erro na conexão', details: err.message });
+    res.status(500).json({ error: "Erro na conexão", details: err.message });
   }
 });
 
-
 // --- LOGIN ---
-app.post('/login', async (req, res) => {
+app.post("/login", async (req, res) => {
   const { email, senha } = req.body;
-  console.log('Tentando login para:', email);
+  console.log("Tentando login para:", email);
 
   try {
     const { rows } = await pool.query(
-      'SELECT id, nome, email, senha, cargo_superior FROM funcionario WHERE email = $1 LIMIT 1',
+      "SELECT id, nome, email, senha, cargo_superior FROM funcionario WHERE email = $1 LIMIT 1",
       [email]
     );
 
     if (rows.length === 0) {
-      return res.status(401).json({ error: 'Email não encontrado' });
+      return res.status(401).json({ error: "Email não encontrado" });
     }
 
     const funcionario = rows[0];
     const senhaCorreta = await bcrypt.compare(senha, funcionario.senha);
 
     if (!senhaCorreta) {
-      return res.status(401).json({ error: 'Senha incorreta' });
+      return res.status(401).json({ error: "Senha incorreta" });
     }
 
     const user = {
       id: funcionario.id,
       nome: funcionario.nome,
       email: funcionario.email,
-      cargo_superior: funcionario.cargo_superior
+      cargo_superior: funcionario.cargo_superior,
     };
 
-    const SECRET_LOCAL = process.env.JWT_SECRET || 'chave_muito_secreta';
-    const token = jwt.sign(user, SECRET_LOCAL, { expiresIn: '1h' });
+    const token = jwt.sign(user, SECRET, { expiresIn: "1h" });
 
     return res.json({ token, user });
   } catch (err) {
-    console.error('Erro ao autenticar usuário:', err);
-    res.status(500).json({ error: 'Erro interno ao autenticar', details: err.message });
+    console.error("Erro ao autenticar usuário:", err);
+    res
+      .status(500)
+      .json({ error: "Erro interno ao autenticar", details: err.message });
   }
 });
 
-
 // --- ALTERAR SENHA ---
-app.post('/alterar-senha', autenticarToken, async (req, res) => {
+app.post("/alterar-senha", autenticarToken, async (req, res) => {
   try {
     const { novaSenha } = req.body;
     if (!novaSenha || novaSenha.length < 6) {
-      return res.status(400).json({ error: 'A nova senha deve ter pelo menos 6 caracteres' });
+      return res
+        .status(400)
+        .json({ error: "A nova senha deve ter pelo menos 6 caracteres" });
     }
 
     const id = req.user.id;
     const senhaHash = await bcrypt.hash(novaSenha, 10);
 
-    await pool.query('UPDATE funcionario SET senha = $1 WHERE id = $2', [senhaHash, id]);
+    await pool.query("UPDATE funcionario SET senha = $1 WHERE id = $2", [
+      senhaHash,
+      id,
+    ]);
     res.json({ success: true });
   } catch (err) {
-    res.status(500).json({ error: 'Erro ao alterar senha', details: err.message });
+    res
+      .status(500)
+      .json({ error: "Erro ao alterar senha", details: err.message });
   }
 });
 
 // --- CRUD FUNCIONÁRIO ---
-app.get('/funcionarios', autenticarToken, async (req, res) => {
+app.get("/funcionarios", autenticarToken, async (req, res) => {
   try {
-    const { rows } = await pool.query('SELECT * FROM funcionario');
+    const { rows } = await pool.query("SELECT * FROM funcionario");
     res.json(rows);
   } catch (err) {
-    res.status(500).json({ error: 'Erro ao buscar funcionários', details: err.message });
+    res
+      .status(500)
+      .json({ error: "Erro ao buscar funcionários", details: err.message });
   }
 });
 
-app.post('/funcionarios', autenticarToken, async (req, res) => {
-  const { nome, telefone, email, senha, cargo_superior, valor_receber, data_receber_pagamento, chave_pix } = req.body;
+app.post("/funcionarios", autenticarToken, async (req, res) => {
+  const {
+    nome,
+    telefone,
+    email,
+    senha,
+    cargo_superior,
+    valor_receber,
+    data_receber_pagamento,
+    chave_pix,
+  } = req.body;
   try {
-    if (!nome || !email || !senha) return res.status(400).json({ error: 'Nome, email e senha são obrigatórios' });
+    if (!nome || !email || !senha)
+      return res
+        .status(400)
+        .json({ error: "Nome, email e senha são obrigatórios" });
 
-    const { rows: existentes } = await pool.query('SELECT id FROM funcionario WHERE email = $1', [email]);
-    if (existentes.length) return res.status(400).json({ error: 'Email já está em uso por outro funcionário.' });
+    const { rows: existentes } = await pool.query(
+      "SELECT id FROM funcionario WHERE email = $1",
+      [email]
+    );
+    if (existentes.length)
+      return res
+        .status(400)
+        .json({ error: "Email já está em uso por outro funcionário." });
 
     const senhaHash = await bcrypt.hash(senha, 10);
     const { rows } = await pool.query(
       `INSERT INTO funcionario (nome, telefone, email, senha, cargo_superior, valor_receber, data_receber_pagamento, chave_pix)
        VALUES ($1, $2, $3, $4, $5, $6, $7, $8) RETURNING id`,
-      [nome, telefone, email, senhaHash, cargo_superior, valor_receber, data_receber_pagamento, chave_pix]
+      [
+        nome,
+        telefone,
+        email,
+        senhaHash,
+        cargo_superior,
+        valor_receber,
+        data_receber_pagamento,
+        chave_pix,
+      ]
     );
-    res.status(201).json({ id: rows[0].id, nome, telefone, email, cargo_superior, valor_receber, data_receber_pagamento, chave_pix });
+    res
+      .status(201)
+      .json({
+        id: rows[0].id,
+        nome,
+        telefone,
+        email,
+        cargo_superior,
+        valor_receber,
+        data_receber_pagamento,
+        chave_pix,
+      });
   } catch (err) {
-    res.status(500).json({ error: 'Erro ao criar funcionário', details: err.message });
+    res
+      .status(500)
+      .json({ error: "Erro ao criar funcionário", details: err.message });
   }
 });
 
-app.put('/funcionarios/:id', autenticarToken, async (req, res) => {
+app.put("/funcionarios/:id", autenticarToken, async (req, res) => {
   const id = parseInt(req.params.id, 10);
-  const { nome, telefone, email, senha, cargo_superior, valor_receber, data_receber_pagamento, chave_pix } = req.body;
+  const {
+    nome,
+    telefone,
+    email,
+    senha,
+    cargo_superior,
+    valor_receber,
+    data_receber_pagamento,
+    chave_pix,
+  } = req.body;
   try {
-    if (!nome || !email) return res.status(400).json({ error: 'Nome e email são obrigatórios' });
-    const { rows: existentes } = await pool.query('SELECT id FROM funcionario WHERE email = $1 AND id != $2', [email, id]);
-    if (existentes.length) return res.status(400).json({ error: 'Email já está em uso por outro funcionário.' });
+    if (!nome || !email)
+      return res.status(400).json({ error: "Nome e email são obrigatórios" });
+    const { rows: existentes } = await pool.query(
+      "SELECT id FROM funcionario WHERE email = $1 AND id != $2",
+      [email, id]
+    );
+    if (existentes.length)
+      return res
+        .status(400)
+        .json({ error: "Email já está em uso por outro funcionário." });
     let senhaHash = null;
     if (senha) {
       senhaHash = await bcrypt.hash(senha, 10);
-      await pool.query('UPDATE funcionario SET senha = $1 WHERE id = $2', [senhaHash, id]);
+      await pool.query("UPDATE funcionario SET senha = $1 WHERE id = $2", [
+        senhaHash,
+        id,
+      ]);
     }
     const result = await pool.query(
       `UPDATE funcionario SET nome = $1, telefone = $2, email = $3
         , cargo_superior = $4, valor_receber = $5, data_receber_pagamento = $6, chave_pix = $7
         WHERE id = $8`,
-      [nome, telefone, email, cargo_superior, valor_receber, data_receber_pagamento, chave_pix, id]
+      [
+        nome,
+        telefone,
+        email,
+        cargo_superior,
+        valor_receber,
+        data_receber_pagamento,
+        chave_pix,
+        id,
+      ]
     );
     if (result.rowCount) {
-      res.json({ id, nome, telefone, email, cargo_superior, valor_receber, data_receber_pagamento, chave_pix });
+      res.json({
+        id,
+        nome,
+        telefone,
+        email,
+        cargo_superior,
+        valor_receber,
+        data_receber_pagamento,
+        chave_pix,
+      });
     } else {
-      res.status(404).json({ error: 'Funcionário não encontrado' });
+      res.status(404).json({ error: "Funcionário não encontrado" });
     }
   } catch (err) {
-    res.status(500).json({ error: 'Erro ao atualizar funcionário', details: err.message });
+    res
+      .status(500)
+      .json({ error: "Erro ao atualizar funcionário", details: err.message });
   }
 });
 
-app.delete('/funcionarios/:id', autenticarToken, async (req, res) => {
+app.delete("/funcionarios/:id", autenticarToken, async (req, res) => {
   const client = await pool.connect();
   try {
     const id = parseInt(req.params.id, 10);
-    await client.query('BEGIN');
-    await client.query('UPDATE loja SET funcionario_id = NULL WHERE funcionario_id = $1', [id]);
-    const result = await client.query('DELETE FROM funcionario WHERE id = $1', [id]);
-    await client.query('COMMIT');
+    await client.query("BEGIN");
+    await client.query(
+      "UPDATE loja SET funcionario_id = NULL WHERE funcionario_id = $1",
+      [id]
+    );
+    const result = await client.query("DELETE FROM funcionario WHERE id = $1", [
+      id,
+    ]);
+    await client.query("COMMIT");
     res.json({ success: result.rowCount > 0 });
   } catch (err) {
-    await client.query('ROLLBACK');
-    res.status(500).json({ error: 'Erro ao excluir funcionário', details: err.message });
+    await client.query("ROLLBACK");
+    res
+      .status(500)
+      .json({ error: "Erro ao excluir funcionário", details: err.message });
   } finally {
     client.release();
   }
 });
 
 // --- CRUD CLIENTE ---
-app.get('/clientes', autenticarToken, async (req, res) => {
+app.get("/clientes", autenticarToken, async (req, res) => {
   try {
-    const { rows } = await pool.query('SELECT * FROM cliente');
+    const { rows } = await pool.query("SELECT * FROM cliente");
     res.json(rows);
   } catch (err) {
-    res.status(500).json({ error: 'Erro ao buscar clientes', details: err.message });
+    res
+      .status(500)
+      .json({ error: "Erro ao buscar clientes", details: err.message });
   }
 });
 
-app.post('/clientes', autenticarToken, async (req, res) => {
+app.post("/clientes", autenticarToken, async (req, res) => {
   try {
     const { nome, telefone } = req.body;
     const result = await pool.query(
-      'INSERT INTO cliente (nome, telefone) VALUES ($1, $2) RETURNING id',
+      "INSERT INTO cliente (nome, telefone) VALUES ($1, $2) RETURNING id",
       [nome, telefone]
     );
     res.status(201).json({ id: result.rows[0].id, nome, telefone });
   } catch (err) {
-    res.status(500).json({ error: 'Erro ao criar cliente', details: err.message });
+    res
+      .status(500)
+      .json({ error: "Erro ao criar cliente", details: err.message });
   }
 });
 
-app.put('/clientes/:id', autenticarToken, async (req, res) => {
+app.put("/clientes/:id", autenticarToken, async (req, res) => {
   try {
     const id = parseInt(req.params.id, 10);
     const { nome, telefone } = req.body;
     const result = await pool.query(
-      'UPDATE cliente SET nome=$1, telefone=$2 WHERE id=$3',
+      "UPDATE cliente SET nome=$1, telefone=$2 WHERE id=$3",
       [nome, telefone, id]
     );
     if (result.rowCount) {
       res.json({ id, nome, telefone });
     } else {
-      res.status(404).json({ error: 'Cliente não encontrado' });
+      res.status(404).json({ error: "Cliente não encontrado" });
     }
   } catch (err) {
-    res.status(500).json({ error: 'Erro ao atualizar cliente', details: err.message });
+    res
+      .status(500)
+      .json({ error: "Erro ao atualizar cliente", details: err.message });
   }
 });
 
-app.delete('/clientes/:id', autenticarToken, async (req, res) => {
+app.delete("/clientes/:id", autenticarToken, async (req, res) => {
   const client = await pool.connect();
   try {
     const id = parseInt(req.params.id, 10);
-    await client.query('BEGIN');
-    await client.query('UPDATE loja SET funcionario_id = NULL WHERE cliente_id = $1', [id]);
-    await client.query('DELETE FROM loja WHERE cliente_id = $1', [id]);
-    const result = await client.query('DELETE FROM cliente WHERE id = $1', [id]);
-    await client.query('COMMIT');
+    await client.query("BEGIN");
+    await client.query(
+      "UPDATE loja SET funcionario_id = NULL WHERE cliente_id = $1",
+      [id]
+    );
+    await client.query("DELETE FROM loja WHERE cliente_id = $1", [id]);
+    const result = await client.query("DELETE FROM cliente WHERE id = $1", [
+      id,
+    ]);
+    await client.query("COMMIT");
     res.json({ success: result.rowCount > 0 });
   } catch (err) {
-    await client.query('ROLLBACK');
-    res.status(500).json({ error: 'Erro ao excluir cliente', details: err.message });
+    await client.query("ROLLBACK");
+    res
+      .status(500)
+      .json({ error: "Erro ao excluir cliente", details: err.message });
   } finally {
     client.release();
   }
 });
 
 // --- CRUD LOJA ---
-app.get('/lojas', autenticarToken, async (req, res) => {
+app.get("/lojas", autenticarToken, async (req, res) => {
   try {
     const { rows } = await pool.query(`
       SELECT 
@@ -267,105 +383,161 @@ app.get('/lojas', autenticarToken, async (req, res) => {
     `);
     res.json(rows);
   } catch (err) {
-    res.status(500).json({ error: 'Erro ao buscar lojas', details: err.message });
+    res
+      .status(500)
+      .json({ error: "Erro ao buscar lojas", details: err.message });
   }
 });
 
-app.post('/lojas', autenticarToken, async (req, res) => {
+app.post("/lojas", autenticarToken, async (req, res) => {
   const {
-    funcionario_id, cliente_id, nome,
-    anuncios_total, anuncios_realizados, anuncios_otimizados,
-    visitas_semana, produto_mais_visitado, vendas_total
+    funcionario_id,
+    cliente_id,
+    nome,
+    anuncios_total,
+    anuncios_realizados,
+    anuncios_otimizados,
+    visitas_semana,
+    produto_mais_visitado,
+    vendas_total,
   } = req.body;
   try {
-    const result = await pool.query(`
+    const result = await pool.query(
+      `
       INSERT INTO loja (funcionario_id, cliente_id, nome, anuncios_total, anuncios_realizados, anuncios_otimizados, visitas_semana, produto_mais_visitado, vendas_total)
       VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9) RETURNING id
-    `, [funcionario_id, cliente_id, nome, anuncios_total, anuncios_realizados, anuncios_otimizados, visitas_semana, produto_mais_visitado, vendas_total]);
+    `,
+      [
+        funcionario_id,
+        cliente_id,
+        nome,
+        anuncios_total,
+        anuncios_realizados,
+        anuncios_otimizados,
+        visitas_semana,
+        produto_mais_visitado,
+        vendas_total,
+      ]
+    );
     res.status(201).json({ id: result.rows[0].id });
   } catch (err) {
-    res.status(500).json({ error: 'Erro ao criar loja', details: err.message });
+    res.status(500).json({ error: "Erro ao criar loja", details: err.message });
   }
 });
 
-app.put('/lojas/:id', autenticarToken, async (req, res) => {
+app.put("/lojas/:id", autenticarToken, async (req, res) => {
   const id = parseInt(req.params.id, 10);
   const {
-    funcionario_id, cliente_id, nome,
-    anuncios_total, anuncios_realizados, anuncios_otimizados,
-    visitas_semana, produto_mais_visitado, vendas_total
+    funcionario_id,
+    cliente_id,
+    nome,
+    anuncios_total,
+    anuncios_realizados,
+    anuncios_otimizados,
+    visitas_semana,
+    produto_mais_visitado,
+    vendas_total,
   } = req.body;
   try {
-    const result = await pool.query(`
+    const result = await pool.query(
+      `
       UPDATE loja SET funcionario_id=$1, cliente_id=$2, nome=$3, anuncios_total=$4, anuncios_realizados=$5, anuncios_otimizados=$6, visitas_semana=$7, produto_mais_visitado=$8, vendas_total=$9 WHERE id=$10
-    `, [funcionario_id, cliente_id, nome, anuncios_total, anuncios_realizados, anuncios_otimizados, visitas_semana, produto_mais_visitado, vendas_total, id]);
+    `,
+      [
+        funcionario_id,
+        cliente_id,
+        nome,
+        anuncios_total,
+        anuncios_realizados,
+        anuncios_otimizados,
+        visitas_semana,
+        produto_mais_visitado,
+        vendas_total,
+        id,
+      ]
+    );
     res.json({ success: result.rowCount > 0 });
   } catch (err) {
-    res.status(500).json({ error: 'Erro ao atualizar loja', details: err.message });
+    res
+      .status(500)
+      .json({ error: "Erro ao atualizar loja", details: err.message });
   }
 });
 
-app.delete('/lojas/:id', autenticarToken, async (req, res) => {
+app.delete("/lojas/:id", autenticarToken, async (req, res) => {
   try {
     const id = parseInt(req.params.id, 10);
-    const result = await pool.query('DELETE FROM loja WHERE id=$1', [id]);
+    const result = await pool.query("DELETE FROM loja WHERE id=$1", [id]);
     res.json({ success: result.rowCount > 0 });
   } catch (err) {
-    res.status(500).json({ error: 'Erro ao excluir loja', details: err.message });
+    res
+      .status(500)
+      .json({ error: "Erro ao excluir loja", details: err.message });
   }
 });
 
-app.post('/api/cadastrar', async (req, res) => {
+app.post("/api/cadastrar", async (req, res) => {
   const { nome, email } = req.body;
   await enviarEmail(email, nome);
-  res.json({ ok: true, message: 'Cadastro completo e e-mail enviado!' });
+  res.json({ ok: true, message: "Cadastro completo e e-mail enviado!" });
 });
 
-app.post('/enviar-email', async (req, res) => {
+app.post("/enviar-email", async (req, res) => {
   try {
     const { html, para } = req.body;
 
     if (!para || !html) {
-      return res.status(400).json({ ok: false, message: 'Parâmetros "para" e "html" são obrigatórios.' });
+      return res
+        .status(400)
+        .json({
+          ok: false,
+          message: 'Parâmetros "para" e "html" são obrigatórios.',
+        });
     }
 
-    await enviarEmail(para, html);
-    res.json({ ok: true, message: 'E-mail enviado!' });
+    await enviarEmail({ to: para, html });
+    res.json({ ok: true, message: "E-mail enviado!" });
   } catch (err) {
-    console.error('Erro ao enviar email:', err);
-    res.status(500).json({ ok: false, message: 'Erro ao enviar e-mail.' });
+    console.error("Erro ao enviar email:", err);
+    res.status(500).json({ ok: false, message: "Erro ao enviar e-mail." });
   }
 });
 
-app.get('/verificar-email', async (req, res) => {
+app.get("/verificar-email", async (req, res) => {
   const { email } = req.query;
   if (!email) {
-    return res.status(400).json({ exists: false, message: 'E-mail não fornecido.' });
+    return res
+      .status(400)
+      .json({ exists: false, message: "E-mail não fornecido." });
   }
   try {
-    const { rows } = await pool.query('SELECT id FROM funcionario WHERE email = $1', [email]);
+    const { rows } = await pool.query(
+      "SELECT id FROM funcionario WHERE email = $1",
+      [email]
+    );
     res.json({ exists: rows.length > 0 });
   } catch (err) {
-    console.error('Erro ao verificar e-mail:', err);
-    res.status(500).json({ exists: false, message: 'Erro ao verificar e-mail.' });
+    console.error("Erro ao verificar e-mail:", err);
+    res
+      .status(500)
+      .json({ exists: false, message: "Erro ao verificar e-mail." });
   }
 });
-
 
 /**
  * /api/preencher — gera conteúdo de listagem via IA (JSON)
  * Mantém a estrutura original, porém com try/catch mais robusto
  * e sem referência a variável "completion" fora do escopo.
  */
-app.post('/api/preencher', async (req, res) => {
+app.post("/api/preencher", async (req, res) => {
   const { prompt } = req.body;
-  let texto = '';
+  let texto = "";
   try {
     const completion = await openai.chat.completions.create({
       model: "gpt-4.1-nano-2025-04-14",
       messages: [
         {
-          role: 'user',
+          role: "user",
           content: `Com base nesse prompt: produto ["${prompt}"]
                   tarefas:
                   1. pesquise as palavras chave mais relevantes na busca do produto e as cite espaçadas por (;) e que seja no máximo 500 caracteres
@@ -383,74 +555,98 @@ app.post('/api/preencher', async (req, res) => {
       ],
     });
 
-    texto = completion.choices[0]?.message?.content || '';
+    texto = completion.choices[0]?.message?.content || "";
     const jsonLimpo = String(texto)
-      .replace(/^```json\s*/i, '')
-      .replace(/```$/, '')
+      .replace(/^```json\s*/i, "")
+      .replace(/```$/, "")
       .trim();
 
     const json = JSON.parse(jsonLimpo);
     res.json(json);
   } catch (err) {
-    console.error('Erro ao fazer parse do JSON:', err.message);
-    res.status(500).json({ error: 'Erro ao interpretar JSON retornado pela IA.', raw: texto });
+    console.error("Erro ao fazer parse do JSON:", err.message);
+    res
+      .status(500)
+      .json({
+        error: "Erro ao interpretar JSON retornado pela IA.",
+        raw: texto,
+      });
   }
 });
-
 
 ///////////// TESTE SANDBOX PARA ACESSO Á AMAZON
 
 // === Helpers de ambiente ===
-const REGION_GROUP = process.env.SPAPI_REGION_GROUP || 'na'; // na | eu | fe  -> BR = na
-const AWS_REGION = process.env.SPAPI_AWS_REGION || 'us-east-1'; // BR = us-east-1
-const USE_SANDBOX_ENV = String(process.env.USE_SANDBOX || 'false') === 'true';
+const REGION_GROUP = process.env.SPAPI_REGION_GROUP || "na"; // na | eu | fe  -> BR = na
+const AWS_REGION = process.env.SPAPI_AWS_REGION || "us-east-1"; // BR = us-east-1
+const USE_SANDBOX_ENV = String(process.env.USE_SANDBOX || "false") === "true";
 
 // host por group
 const HOSTS = {
-  na: 'sellingpartnerapi-na.amazon.com',
-  eu: 'sellingpartnerapi-eu.amazon.com',
-  fe: 'sellingpartnerapi-fe.amazon.com'
+  na: "sellingpartnerapi-na.amazon.com",
+  eu: "sellingpartnerapi-eu.amazon.com",
+  fe: "sellingpartnerapi-fe.amazon.com",
 };
 
 function hostBySandbox(useSandbox) {
   const base = HOSTS[REGION_GROUP] || HOSTS.na;
-  const effectiveSandbox = typeof useSandbox === 'boolean' ? useSandbox : USE_SANDBOX_ENV;
+  const effectiveSandbox =
+    typeof useSandbox === "boolean" ? useSandbox : USE_SANDBOX_ENV;
   return effectiveSandbox ? `sandbox.${base}` : base;
 }
 
 // === LWA TOKENS ===
-async function getGrantlessAccessToken(scopes = ['sellingpartnerapi::notifications']) {
+async function getGrantlessAccessToken(
+  scopes = ["sellingpartnerapi::notifications"]
+) {
   const params = new URLSearchParams();
-  params.append('grant_type', 'client_credentials');
-  params.append('client_id', process.env.LWA_CLIENT_ID);
-  params.append('client_secret', process.env.LWA_CLIENT_SECRET);
-  params.append('scope', scopes.join(' '));
+  params.append("grant_type", "client_credentials");
+  params.append("client_id", process.env.LWA_CLIENT_ID);
+  params.append("client_secret", process.env.LWA_CLIENT_SECRET);
+  params.append("scope", scopes.join(" "));
 
-  const res = await fetch('https://api.amazon.com/auth/o2/token', { method: 'POST', body: params });
+  const res = await fetch("https://api.amazon.com/auth/o2/token", {
+    method: "POST",
+    body: params,
+  });
   const data = await res.json();
   if (!res.ok) {
-    throw new Error(`LWA client_credentials falhou: ${res.status} ${JSON.stringify(data)}`);
+    throw new Error(
+      `LWA client_credentials falhou: ${res.status} ${JSON.stringify(data)}`
+    );
   }
   return data.access_token; // ~1h
 }
 
 async function getAccessTokenWithRefresh() {
   const params = new URLSearchParams();
-  params.append('grant_type', 'refresh_token');
-  params.append('refresh_token', process.env.LWA_REFRESH_TOKEN);
-  params.append('client_id', process.env.LWA_CLIENT_ID);
-  params.append('client_secret', process.env.LWA_CLIENT_SECRET);
+  params.append("grant_type", "refresh_token");
+  params.append("refresh_token", process.env.LWA_REFRESH_TOKEN);
+  params.append("client_id", process.env.LWA_CLIENT_ID);
+  params.append("client_secret", process.env.LWA_CLIENT_SECRET);
 
-  const res = await fetch('https://api.amazon.com/auth/o2/token', { method: 'POST', body: params });
+  const res = await fetch("https://api.amazon.com/auth/o2/token", {
+    method: "POST",
+    body: params,
+  });
   const data = await res.json();
   if (!res.ok) {
-    throw new Error(`LWA refresh_token falhou: ${res.status} ${JSON.stringify(data)}`);
+    throw new Error(
+      `LWA refresh_token falhou: ${res.status} ${JSON.stringify(data)}`
+    );
   }
   return data.access_token; // ~1h
 }
 
 // === Assinar e chamar SP-API ===
-async function spApiFetch({ path, method = 'GET', query = '', body = null, accessToken, useSandbox }) {
+async function spApiFetch({
+  path,
+  method = "GET",
+  query = "",
+  body = null,
+  accessToken,
+  useSandbox,
+}) {
   const host = hostBySandbox(useSandbox);
   const urlPath = query ? `${path}?${query}` : path;
 
@@ -458,28 +654,37 @@ async function spApiFetch({ path, method = 'GET', query = '', body = null, acces
     host,
     path: urlPath,
     method,
-    service: 'execute-api',
+    service: "execute-api",
     region: AWS_REGION,
     headers: {
       host,
-      'content-type': 'application/json',
-      'x-amz-access-token': accessToken
+      "content-type": "application/json",
+      "x-amz-access-token": accessToken,
+      "user-agent": "SampaioEcom-SPAPI/1.0 (contact: suporte@sampaioecom.com)",
     },
-    body: body ? JSON.stringify(body) : undefined
+    body: body ? JSON.stringify(body) : undefined,
   };
 
   aws4.sign(request, {
     accessKeyId: process.env.AWS_ACCESS_KEY_ID,
-    secretAccessKey: process.env.AWS_SECRET_ACCESS_KEY
+    secretAccessKey: process.env.AWS_SECRET_ACCESS_KEY,
     // sessionToken: process.env.AWS_SESSION_TOKEN, // se usar STS
   });
 
   const url = `https://${host}${urlPath}`;
-  const resp = await fetch(url, { method, headers: request.headers, body: request.body });
+  const resp = await fetch(url, {
+    method,
+    headers: request.headers,
+    body: request.body,
+  });
 
   const text = await resp.text();
   let json;
-  try { json = JSON.parse(text); } catch { json = { raw: text }; }
+  try {
+    json = JSON.parse(text);
+  } catch {
+    json = { raw: text };
+  }
 
   if (!resp.ok) {
     throw new Error(`SP-API erro ${resp.status}: ${text}`);
@@ -493,7 +698,7 @@ async function gerarConteudoIAComMesmoMolde(prompt) {
     model: "gpt-4.1-nano-2025-04-14",
     messages: [
       {
-        role: 'user',
+        role: "user",
         content: `Com base nesse prompt: produto ["${prompt}"]
                 tarefas:
                 1. pesquise as palavras chave mais relevantes na busca do produto e as cite espaçadas por (;) e que seja no máximo 500 caracteres
@@ -511,91 +716,110 @@ async function gerarConteudoIAComMesmoMolde(prompt) {
     ],
   });
 
-  const bruto = completion.choices[0]?.message?.content || '';
-  const limpo = String(bruto).replace(/^```json\s*/i, '').replace(/```$/, '').trim();
+  const bruto = completion.choices[0]?.message?.content || "";
+  const limpo = String(bruto)
+    .replace(/^```json\s*/i, "")
+    .replace(/```$/, "")
+    .trim();
   return JSON.parse(limpo);
 }
 
 // === 4) Endpoint: IA gera JSON (mantido, mas usando o helper) ===
-app.post('/api/ia/generate', async (req, res) => {
+app.post("/api/ia/generate", async (req, res) => {
   const { productPrompt } = req.body || {};
-  if (!productPrompt) return res.status(400).json({ error: 'productPrompt é obrigatório' });
+  if (!productPrompt)
+    return res.status(400).json({ error: "productPrompt é obrigatório" });
 
   try {
     const json = await gerarConteudoIAComMesmoMolde(productPrompt);
     res.json({ ok: true, ia: json });
   } catch (err) {
     console.error(err);
-    res.status(500).json({ error: 'Falha ao gerar JSON da IA', detail: err.message });
+    res
+      .status(500)
+      .json({ error: "Falha ao gerar JSON da IA", detail: err.message });
   }
 });
 
 // === 5) Endpoint sandbox-check (grantless + IA) — mantém a ideia e melhora ===
-app.post('/api/ia/sandbox-check', async (req, res) => {
+app.post("/api/ia/sandbox-check", async (req, res) => {
   const { productPrompt } = req.body || {};
-  if (!productPrompt) return res.status(400).json({ error: 'productPrompt é obrigatório' });
+  if (!productPrompt)
+    return res.status(400).json({ error: "productPrompt é obrigatório" });
 
   try {
     const iaJson = await gerarConteudoIAComMesmoMolde(productPrompt);
 
-    const keywords = (iaJson.palavras_chave || '')
-      .split(/[;,\n]/).map(s => s.trim()).filter(Boolean);
-    const title = iaJson.titulos || '';
-    const description = iaJson.descricoes || '';
+    const keywords = (iaJson.palavras_chave || "")
+      .split(/[;,\n]/)
+      .map((s) => s.trim())
+      .filter(Boolean);
+    const title = iaJson.titulos || "";
+    const description = iaJson.descricoes || "";
     const bullets = Object.values(iaJson.bullet_points || {}).filter(Boolean);
 
     // Grantless em SANDBOX: notifications
-    const accessToken = await getGrantlessAccessToken(['sellingpartnerapi::notifications']);
+    const accessToken = await getGrantlessAccessToken([
+      "sellingpartnerapi::notifications",
+    ]);
     const notifResp = await spApiFetch({
-      path: '/notifications/v1/destinations',
-      method: 'GET',
+      path: "/notifications/v1/destinations",
+      method: "GET",
       accessToken,
-      useSandbox: True
+      useSandbox: true,
     });
 
     res.json({
       ok: true,
       ia_mapped: { title, description, bullets, keywords },
       spapi_check: notifResp,
-      note: 'Fluxo grantless SANDBOX OK.'
+      note: "Fluxo grantless SANDBOX OK.",
     });
   } catch (err) {
     console.error(err);
-    res.status(500).json({ error: 'Falha no sandbox-check', detail: err.message });
+    res
+      .status(500)
+      .json({ error: "Falha no sandbox-check", detail: err.message });
   }
 });
-
 
 // === NOVAS ROTAS SOLICITADAS ===
 
 // 6) SANDBOX — processa conteúdo IA e valida SP-API (grantless)
-app.post('/api/amazon/sandbox/process', async (req, res) => {
+app.post("/api/amazon/sandbox/process", async (req, res) => {
   const { prompt } = req.body || {};
-  if (!prompt) return res.status(400).json({ error: 'prompt é obrigatório' });
+  if (!prompt) return res.status(400).json({ error: "prompt é obrigatório" });
 
   try {
     const iaJson = await gerarConteudoIAComMesmoMolde(prompt);
-    const accessToken = await getGrantlessAccessToken(['sellingpartnerapi::notifications']);
+    const accessToken = await getGrantlessAccessToken([
+      "sellingpartnerapi::notifications",
+    ]);
 
     // Exemplo de chamada segura no sandbox
     const sp = await spApiFetch({
-      path: '/notifications/v1/destinations',
-      method: 'GET',
+      path: "/notifications/v1/destinations",
+      method: "GET",
       accessToken,
-      useSandbox: True
+      useSandbox: true,
     });
 
-    res.json({ ok: true, environment: 'SANDBOX', ia: iaJson, spapi_check: sp });
+    res.json({ ok: true, environment: "SANDBOX", ia: iaJson, spapi_check: sp });
   } catch (err) {
     console.error(err);
-    res.status(500).json({ error: 'Falha em /api/amazon/sandbox/process', detail: err.message });
+    res
+      .status(500)
+      .json({
+        error: "Falha em /api/amazon/sandbox/process",
+        detail: err.message,
+      });
   }
 });
 
 // 7) PRODUÇÃO — processa conteúdo IA e valida SP-API (autorizado via refresh_token)
-app.post('/api/amazon/prod/process', async (req, res) => {
+app.post("/api/amazon/prod/process", async (req, res) => {
   const { prompt } = req.body || {};
-  if (!prompt) return res.status(400).json({ error: 'prompt é obrigatório' });
+  if (!prompt) return res.status(400).json({ error: "prompt é obrigatório" });
 
   try {
     const iaJson = await gerarConteudoIAComMesmoMolde(prompt);
@@ -603,30 +827,39 @@ app.post('/api/amazon/prod/process', async (req, res) => {
 
     // Exemplo seguro em produção: sellers participations (autorizado)
     const sellers = await spApiFetch({
-      path: '/sellers/v1/marketplaceParticipations',
-      method: 'GET',
+      path: "/sellers/v1/marketplaceParticipations",
+      method: "GET",
       accessToken,
-      useSandbox: False
+      useSandbox: false,
     });
 
-    res.json({ ok: true, environment: 'PRODUCTION', ia: iaJson, spapi_check: sellers });
+    res.json({
+      ok: true,
+      environment: "PRODUCTION",
+      ia: iaJson,
+      spapi_check: sellers,
+    });
   } catch (err) {
     console.error(err);
-    res.status(500).json({ error: 'Falha em /api/amazon/prod/process', detail: err.message });
+    res
+      .status(500)
+      .json({
+        error: "Falha em /api/amazon/prod/process",
+        detail: err.message,
+      });
   }
 });
 
 //////////////////////////////
 
-
-app.get('/health', (req, res) => {
-  res.json({ status: 'ok', timestamp: new Date() });
+app.get("/health", (req, res) => {
+  res.json({ status: "ok", timestamp: new Date() });
 });
 
 // Middleware de erro (assinatura correta)
 app.use((err, req, res, next) => {
-  console.error('Erro não tratado:', err);
-  res.status(500).json({ error: 'Erro interno do servidor' });
+  console.error("Erro não tratado:", err);
+  res.status(500).json({ error: "Erro interno do servidor" });
 });
 
 app.listen(process.env.PORT || 3001, () => {

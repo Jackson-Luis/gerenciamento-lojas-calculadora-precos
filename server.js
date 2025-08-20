@@ -850,6 +850,41 @@ app.post("/api/amazon/prod/process", async (req, res) => {
   }
 });
 
+
+app.get('/callback', async (req, res) => {
+  const authCode = req.query.code;
+
+  if (!authCode) {
+    return res.status(400).send("Nenhum code retornado pela Amazon.");
+  }
+
+  try {
+    const response = await fetch("https://api.amazon.com/auth/o2/token", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/x-www-form-urlencoded",
+      },
+      body: new URLSearchParams({
+        grant_type: "authorization_code",
+        code: authCode,
+        client_id: process.env.LWA_CLIENT_ID,
+        client_secret: process.env.LWA_CLIENT_SECRET,
+        redirect_uri: "https://gerenciamento-lojas-calculadora-precos.onrender.com/callback"
+      })
+    });
+
+    const data = await response.json();
+
+    // Aqui você salva o refresh_token retornado
+    const refreshToken = data.refresh_token;
+
+    res.send("Refresh Token gerado: " + refreshToken);
+  } catch (err) {
+    console.error(err.response?.data || err.message);
+    res.status(500).send("Erro ao trocar o code pelo token.");
+  }
+});
+
 //////////////////////////////
 
 app.get("/health", (req, res) => {

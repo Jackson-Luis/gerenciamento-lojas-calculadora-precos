@@ -51,16 +51,16 @@ function autenticarToken(req, res, next) {
   });
 }
 
-cron.schedule("*/5 * * * *", async () => {
-  try {
-    const response = await fetch(
-      "https://gerenciamento-lojas-calculadora-precos.onrender.com/test-db"
-    );
-    console.log(`Ping enviado. Status: ${response.status}`);
-  } catch (error) {
-    console.error("Erro ao pingar o servidor:", error.message);
-  }
-});
+// cron.schedule("*/5 * * * *", async () => {
+//   try {
+//     const response = await fetch(
+//       "https://gerenciamento-lojas-calculadora-precos.onrender.com/test-db"
+//     );
+//     console.log(`Ping enviado. Status: ${response.status}`);
+//   } catch (error) {
+//     console.error("Erro ao pingar o servidor:", error.message);
+//   }
+// });
 
 app.get("/test-db", async (req, res) => {
   try {

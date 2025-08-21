@@ -51,7 +51,7 @@ function autenticarToken(req, res, next) {
   });
 }
 
-cron.schedule("*/1 * * * *", async () => {
+cron.schedule("*/5 * * * *", async () => {
   try {
     const response = await fetch(
       "https://gerenciamento-lojas-calculadora-precos.onrender.com/test-db"
@@ -649,7 +649,7 @@ async function spApiFetch({
 }) {
   const host = hostBySandbox(useSandbox);
   const urlPath = query ? `${path}?${query}` : path;
-
+  console.log("Host:", host);
   const request = {
     host,
     path: urlPath,
@@ -659,8 +659,7 @@ async function spApiFetch({
     headers: {
       host,
       "content-type": "application/json",
-      "x-amz-access-token": accessToken,
-      "user-agent": "SampaioEcom-SPAPI/1.0 (contact: suporte@sampaioecom.com)",
+      "x-amz-access-token": accessToken
     },
     body: body ? JSON.stringify(body) : undefined,
   };
@@ -823,6 +822,7 @@ app.post("/api/amazon/prod/process", async (req, res) => {
 
   try {
     const iaJson = await gerarConteudoIAComMesmoMolde(prompt);
+    console.log(await gerarConteudoIAComMesmoMolde(prompt))
     const accessToken = await getAccessTokenWithRefresh();
 
     // Exemplo seguro em produção: sellers participations (autorizado)

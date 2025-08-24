@@ -210,7 +210,7 @@ watch(filter, () => {
 
 async function carregar() {
   const resp = await authFetch(
-    `https://gerenciamento-lojas-calculadora-precos.onrender.com/funcionarios`
+    `http://localhost:3001/funcionarios`
   );
   const rows = await resp.json();
   funcionarios.value = rows.map((r: Funcionario) => ({
@@ -238,7 +238,7 @@ async function excluir(id: number) {
 async function confirmarExclusao() {
   if (idParaExcluir.value !== null) {
     await authFetch(
-      `https://gerenciamento-lojas-calculadora-precos.onrender.com/funcionarios/${idParaExcluir.value}`,
+      `http://localhost:3001/funcionarios/${idParaExcluir.value}`,
       {
         method: "DELETE",
       }
@@ -257,7 +257,7 @@ async function atualizarPagamento(e: Funcionario) {
     valor_receber: atualizado.valor_receber,
     data_receber_pagamento: atualizado.data_receber_pagamento,
   };
-  let url = `https://gerenciamento-lojas-calculadora-precos.onrender.com/funcionarios/${atualizado.id}`;
+  let url = `http://localhost:3001/funcionarios/${atualizado.id}`;
   let method = "PUT";
   await authFetch(url, {
     method,

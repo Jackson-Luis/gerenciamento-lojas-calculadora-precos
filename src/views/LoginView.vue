@@ -103,7 +103,7 @@ onMounted(() => {
 
 const login = async () => {
   try {
-    const resp = await fetch(`https://gerenciamento-lojas-calculadora-precos.onrender.com/login`, {
+    const resp = await fetch(`http://localhost:3001/login`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ email: email.value, senha: senha.value })

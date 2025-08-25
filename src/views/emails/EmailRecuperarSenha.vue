@@ -59,7 +59,7 @@ const enviar = async () => {
     return;
   }
 
-  const isEmailExistente = await fetch(`http://localhost:3001/verificar-email?email=${email.value}`)
+  const isEmailExistente = await fetch(`https://gerenciamento-lojas-calculadora-precos.onrender.com/verificar-email?email=${email.value}`)
     .then(res => res.json())
     .then(data => data.exists);
     console.log("E-mail existe:", isEmailExistente);
@@ -75,7 +75,7 @@ const enviar = async () => {
       title: "Recuperação de Senha",
     });
 
-    const response = await fetch(`http://localhost:3001/enviar-email`, {
+    const response = await fetch(`https://gerenciamento-lojas-calculadora-precos.onrender.com/enviar-email`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ para: email.value, html }),

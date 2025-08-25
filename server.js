@@ -54,7 +54,8 @@ app.use(
   cors({
     origin: [
       "https://jackson-luis.github.io",
-      // "http://localhost:3001", // se consumir a si mesmo
+      // "https://gerenciamento-lojas-calculadora-precos.onrender.com", // se consumir a si mesmo
+      "https://gerenciamento-lojas-calculadora-precos.onrender.com"
     ],
     credentials: true,
     methods: ["GET", "POST", "PUT", "DELETE", "OPTIONS"],
@@ -83,11 +84,12 @@ function requireDb(req, res, next) {
 }
 
 
-cron.schedule("*/5 * * * *", requireDb, async () => {
+cron.schedule("*/1 * * * *", async () => {
   try {
     const response = await fetch(
       "https://gerenciamento-lojas-calculadora-precos.onrender.com/test-db"
     );
+    
     console.log(`Ping enviado. Status: ${response.status}`);
   } catch (error) {
     console.error("Erro ao pingar o servidor:", error.message);
@@ -901,7 +903,7 @@ app.get('/callback', async (req, res) => {
         code: authCode,
         client_id: process.env.LWA_CLIENT_ID,
         client_secret: process.env.LWA_CLIENT_SECRET,
-        redirect_uri: "http://localhost:3001/callback"
+        redirect_uri: "https://gerenciamento-lojas-calculadora-precos.onrender.com/callback"
       })
     });
 

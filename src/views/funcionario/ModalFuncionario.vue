@@ -111,10 +111,10 @@ function maskTelefone(event: Event) {
 async function cadastrarOuEditar() {
     isLoading.value = true
     try {
-        let url = `http://localhost:3001/funcionarios`;
+        let url = `https://gerenciamento-lojas-calculadora-precos.onrender.com/funcionarios`;
         let method = 'POST';
         if (form.id) {
-            url = `http://localhost:3001/funcionarios/${form.id}`;
+            url = `https://gerenciamento-lojas-calculadora-precos.onrender.com/funcionarios/${form.id}`;
             method = 'PUT';
         }
         await authFetch(url, {

@@ -154,7 +154,7 @@ watch(filter, () => {
 
 async function carregar() {
   const resp = await authFetch(
-    `http://localhost:3001/clientes`
+    `https://gerenciamento-lojas-calculadora-precos.onrender.com/clientes`
   );
   clientes.value = await resp.json();
   clientes.value.sort((a, b) => (a.nome ?? "").localeCompare(b.nome ?? ""));
@@ -178,7 +178,7 @@ async function excluir(id: number) {
 async function confirmarExclusao() {
   if (idParaExcluir.value !== null) {
     await authFetch(
-      `http://localhost:3001/clientes/${idParaExcluir.value}`,
+      `https://gerenciamento-lojas-calculadora-precos.onrender.com/clientes/${idParaExcluir.value}`,
       { method: "DELETE" }
     );
     await carregar();

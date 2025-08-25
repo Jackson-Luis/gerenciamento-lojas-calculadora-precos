@@ -198,7 +198,7 @@ const gerarCampos = async () => {
   erro.value = null;
   loading.value = true;
   try {
-    const response = await fetch("http://localhost:3001/api/preencher", {
+    const response = await fetch("https://gerenciamento-lojas-calculadora-precos.onrender.com/api/preencher", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ prompt: prompt.value }),

@@ -89,7 +89,7 @@ async function handleSubmit() {
 
   try {
     isLoading.value = true
-    await authFetch(`http://localhost:3001/alterar-senha`, {
+    await authFetch(`https://gerenciamento-lojas-calculadora-precos.onrender.com/alterar-senha`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ novaSenha: form.novaSenha }),

@@ -213,17 +213,17 @@ watch(filter, () => {
 })
 async function carregar() {
   const user = getCurrentUser();
-  let lojasUrl = `http://localhost:3001/lojas`;
+  let lojasUrl = `https://gerenciamento-lojas-calculadora-precos.onrender.com/lojas`;
   if (user && user.id && user.id !== 0) {
     lojasUrl += `?funcionario_id=${user.id}`;
   }
   const [lojasResp, funcsResp, clientesResp] = await Promise.all([
     authFetch(lojasUrl),
     authFetch(
-      `http://localhost:3001/funcionarios`
+      `https://gerenciamento-lojas-calculadora-precos.onrender.com/funcionarios`
     ),
     authFetch(
-      `http://localhost:3001/clientes`
+      `https://gerenciamento-lojas-calculadora-precos.onrender.com/clientes`
     ),
   ]);
   let lojasData = await lojasResp.json();
@@ -245,7 +245,7 @@ async function carregar() {
 async function confirmarExclusao() {
   if (idParaExcluir.value !== null) {
     await authFetch(
-      `http://localhost:3001/lojas/${idParaExcluir.value}`,
+      `https://gerenciamento-lojas-calculadora-precos.onrender.com/lojas/${idParaExcluir.value}`,
       { method: "DELETE" }
     );
     await carregar();

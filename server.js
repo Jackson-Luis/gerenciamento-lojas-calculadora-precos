@@ -18,13 +18,37 @@ const port = process.env.PORT || 3001;
 const SECRET = process.env.JWT_SECRET || "chave_muito_secreta";
 const openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY_TESTE });
 
-const pool = new Pool({
-  connectionString: process.env.DATABASE_URL,
-  ssl:
-    process.env.NODE_ENV === "production"
-      ? { rejectUnauthorized: false }
-      : false,
-});
+const DISABLE_DB = String(process.env.DISABLE_DB || "false") === "true";
+
+let pool = null;
+if (!DISABLE_DB && process.env.DATABASE_URL) {
+  try {
+    pool = new Pool({
+      connectionString: process.env.DATABASE_URL,
+      ssl: process.env.NODE_ENV === "production" ? { rejectUnauthorized: false } : false,
+    });
+    // sanity check (não derruba o app se falhar)
+    pool.query("select 1").then(() => {
+      console.log("DB OK");
+    }).catch(err => {
+      console.warn("DB indisponível (seguindo sem DB):", err.message);
+      pool = null;
+    });
+  } catch (e) {
+    console.warn("Falha ao iniciar DB (seguindo sem DB):", e.message);
+    pool = null;
+  }
+} else {
+  console.log("DB desativado por DISABLE_DB");
+}
+
+// const pool = new Pool({
+//   connectionString: process.env.DATABASE_URL,
+//   ssl:
+//     process.env.NODE_ENV === "production"
+//       ? { rejectUnauthorized: false }
+//       : false,
+// });
 
 app.use(
   cors({
@@ -51,18 +75,26 @@ function autenticarToken(req, res, next) {
   });
 }
 
-// cron.schedule("*/5 * * * *", async () => {
-//   try {
-//     const response = await fetch(
-//       "https://gerenciamento-lojas-calculadora-precos.onrender.com/test-db"
-//     );
-//     console.log(`Ping enviado. Status: ${response.status}`);
-//   } catch (error) {
-//     console.error("Erro ao pingar o servidor:", error.message);
-//   }
-// });
+function requireDb(req, res, next) {
+  if (!pool) {
+    return res.status(503).json({ error: "DB temporariamente desativado" });
+  }
+  next();
+}
 
-app.get("/test-db", async (req, res) => {
+
+cron.schedule("*/5 * * * *", requireDb, async () => {
+  try {
+    const response = await fetch(
+      "https://gerenciamento-lojas-calculadora-precos.onrender.com/test-db"
+    );
+    console.log(`Ping enviado. Status: ${response.status}`);
+  } catch (error) {
+    console.error("Erro ao pingar o servidor:", error.message);
+  }
+});
+
+app.get("/test-db", requireDb, async (req, res) => {
   try {
     const { rows } = await pool.query("SELECT NOW()");
     res.json(rows);
@@ -72,7 +104,7 @@ app.get("/test-db", async (req, res) => {
 });
 
 // --- LOGIN ---
-app.post("/login", async (req, res) => {
+app.post("/login", requireDb, async (req, res) => {
   const { email, senha } = req.body;
   console.log("Tentando login para:", email);
 
@@ -112,7 +144,7 @@ app.post("/login", async (req, res) => {
 });
 
 // --- ALTERAR SENHA ---
-app.post("/alterar-senha", autenticarToken, async (req, res) => {
+app.post("/alterar-senha", autenticarToken, requireDb, async (req, res) => {
   try {
     const { novaSenha } = req.body;
     if (!novaSenha || novaSenha.length < 6) {
@@ -137,7 +169,7 @@ app.post("/alterar-senha", autenticarToken, async (req, res) => {
 });
 
 // --- CRUD FUNCIONÁRIO ---
-app.get("/funcionarios", autenticarToken, async (req, res) => {
+app.get("/funcionarios", autenticarToken, requireDb, async (req, res) => {
   try {
     const { rows } = await pool.query("SELECT * FROM funcionario");
     res.json(rows);
@@ -148,7 +180,7 @@ app.get("/funcionarios", autenticarToken, async (req, res) => {
   }
 });
 
-app.post("/funcionarios", autenticarToken, async (req, res) => {
+app.post("/funcionarios", autenticarToken, requireDb, async (req, res) => {
   const {
     nome,
     telefone,
@@ -208,7 +240,7 @@ app.post("/funcionarios", autenticarToken, async (req, res) => {
   }
 });
 
-app.put("/funcionarios/:id", autenticarToken, async (req, res) => {
+app.put("/funcionarios/:id", autenticarToken, requireDb, async (req, res) => {
   const id = parseInt(req.params.id, 10);
   const {
     nome,
@@ -275,7 +307,7 @@ app.put("/funcionarios/:id", autenticarToken, async (req, res) => {
   }
 });
 
-app.delete("/funcionarios/:id", autenticarToken, async (req, res) => {
+app.delete("/funcionarios/:id", autenticarToken, requireDb, async (req, res) => {
   const client = await pool.connect();
   try {
     const id = parseInt(req.params.id, 10);
@@ -300,7 +332,7 @@ app.delete("/funcionarios/:id", autenticarToken, async (req, res) => {
 });
 
 // --- CRUD CLIENTE ---
-app.get("/clientes", autenticarToken, async (req, res) => {
+app.get("/clientes", autenticarToken, requireDb, async (req, res) => {
   try {
     const { rows } = await pool.query("SELECT * FROM cliente");
     res.json(rows);
@@ -311,7 +343,7 @@ app.get("/clientes", autenticarToken, async (req, res) => {
   }
 });
 
-app.post("/clientes", autenticarToken, async (req, res) => {
+app.post("/clientes", autenticarToken, requireDb, async (req, res) => {
   try {
     const { nome, telefone } = req.body;
     const result = await pool.query(
@@ -326,7 +358,7 @@ app.post("/clientes", autenticarToken, async (req, res) => {
   }
 });
 
-app.put("/clientes/:id", autenticarToken, async (req, res) => {
+app.put("/clientes/:id", autenticarToken, requireDb, async (req, res) => {
   try {
     const id = parseInt(req.params.id, 10);
     const { nome, telefone } = req.body;
@@ -346,7 +378,7 @@ app.put("/clientes/:id", autenticarToken, async (req, res) => {
   }
 });
 
-app.delete("/clientes/:id", autenticarToken, async (req, res) => {
+app.delete("/clientes/:id", autenticarToken, requireDb, async (req, res) => {
   const client = await pool.connect();
   try {
     const id = parseInt(req.params.id, 10);
@@ -372,7 +404,7 @@ app.delete("/clientes/:id", autenticarToken, async (req, res) => {
 });
 
 // --- CRUD LOJA ---
-app.get("/lojas", autenticarToken, async (req, res) => {
+app.get("/lojas", autenticarToken, requireDb, async (req, res) => {
   try {
     const { rows } = await pool.query(`
       SELECT 
@@ -389,7 +421,7 @@ app.get("/lojas", autenticarToken, async (req, res) => {
   }
 });
 
-app.post("/lojas", autenticarToken, async (req, res) => {
+app.post("/lojas", autenticarToken, requireDb, async (req, res) => {
   const {
     funcionario_id,
     cliente_id,
@@ -425,7 +457,7 @@ app.post("/lojas", autenticarToken, async (req, res) => {
   }
 });
 
-app.put("/lojas/:id", autenticarToken, async (req, res) => {
+app.put("/lojas/:id", autenticarToken, requireDb, async (req, res) => {
   const id = parseInt(req.params.id, 10);
   const {
     funcionario_id,
@@ -464,7 +496,7 @@ app.put("/lojas/:id", autenticarToken, async (req, res) => {
   }
 });
 
-app.delete("/lojas/:id", autenticarToken, async (req, res) => {
+app.delete("/lojas/:id", autenticarToken, requireDb, async (req, res) => {
   try {
     const id = parseInt(req.params.id, 10);
     const result = await pool.query("DELETE FROM loja WHERE id=$1", [id]);
@@ -476,13 +508,13 @@ app.delete("/lojas/:id", autenticarToken, async (req, res) => {
   }
 });
 
-app.post("/api/cadastrar", async (req, res) => {
+app.post("/api/cadastrar", requireDb, async (req, res) => {
   const { nome, email } = req.body;
   await enviarEmail(email, nome);
   res.json({ ok: true, message: "Cadastro completo e e-mail enviado!" });
 });
 
-app.post("/enviar-email", async (req, res) => {
+app.post("/enviar-email", requireDb, async (req, res) => {
   try {
     const { html, para } = req.body;
 
@@ -503,7 +535,7 @@ app.post("/enviar-email", async (req, res) => {
   }
 });
 
-app.get("/verificar-email", async (req, res) => {
+app.get("/verificar-email", requireDb, async (req, res) => {
   const { email } = req.query;
   if (!email) {
     return res
@@ -529,7 +561,7 @@ app.get("/verificar-email", async (req, res) => {
  * Mantém a estrutura original, porém com try/catch mais robusto
  * e sem referência a variável "completion" fora do escopo.
  */
-app.post("/api/preencher", async (req, res) => {
+app.post("/api/preencher", requireDb, async (req, res) => {
   const { prompt } = req.body;
   let texto = "";
   try {
@@ -724,7 +756,7 @@ async function gerarConteudoIAComMesmoMolde(prompt) {
 }
 
 // === 4) Endpoint: IA gera JSON (mantido, mas usando o helper) ===
-app.post("/api/ia/generate", async (req, res) => {
+app.post("/api/ia/generate", requireDb, async (req, res) => {
   const { productPrompt } = req.body || {};
   if (!productPrompt)
     return res.status(400).json({ error: "productPrompt é obrigatório" });
@@ -741,7 +773,7 @@ app.post("/api/ia/generate", async (req, res) => {
 });
 
 // === 5) Endpoint sandbox-check (grantless + IA) — mantém a ideia e melhora ===
-app.post("/api/ia/sandbox-check", async (req, res) => {
+app.post("/api/ia/sandbox-check", requireDb, async (req, res) => {
   const { productPrompt } = req.body || {};
   if (!productPrompt)
     return res.status(400).json({ error: "productPrompt é obrigatório" });
@@ -785,7 +817,7 @@ app.post("/api/ia/sandbox-check", async (req, res) => {
 // === NOVAS ROTAS SOLICITADAS ===
 
 // 6) SANDBOX — processa conteúdo IA e valida SP-API (grantless)
-app.post("/api/amazon/sandbox/process", async (req, res) => {
+app.post("/api/amazon/sandbox/process", requireDb, async (req, res) => {
   const { prompt } = req.body || {};
   if (!prompt) return res.status(400).json({ error: "prompt é obrigatório" });
 
@@ -816,7 +848,7 @@ app.post("/api/amazon/sandbox/process", async (req, res) => {
 });
 
 // 7) PRODUÇÃO — processa conteúdo IA e valida SP-API (autorizado via refresh_token)
-app.post("/api/amazon/prod/process", async (req, res) => {
+app.post("/api/amazon/prod/process", requireDb, async (req, res) => {
   const { prompt } = req.body || {};
   if (!prompt) return res.status(400).json({ error: "prompt é obrigatório" });
 

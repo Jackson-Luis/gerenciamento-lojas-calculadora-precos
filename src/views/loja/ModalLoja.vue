@@ -128,10 +128,10 @@ function reset() {
 async function cadastrarOuEditar() {
   isLoading.value = true;
   try {
-    let url = `https://gerenciamento-lojas-calculadora-precos.onrender.com/lojas`;
+    let url = `http://localhost:3001/lojas`;
     let method = "POST";
     if (form.id) {
-      url = `https://gerenciamento-lojas-calculadora-precos.onrender.com/lojas/${form.id}`;
+      url = `http://localhost:3001/lojas/${form.id}`;
       method = "PUT";
     }
     await authFetch(url, {

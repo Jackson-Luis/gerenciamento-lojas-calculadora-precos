@@ -97,12 +97,7 @@ cron.schedule("*/1 * * * *", async () => {
 });
 
 app.get("/test-db", requireDb, async (req, res) => {
-  try {
-    const { rows } = await pool.query("SELECT NOW()");
-    res.json(rows);
-  } catch (err) {
-    res.status(500).json({ error: "Erro na conexão", details: err.message });
-  }
+  res.json({ message: "Servidor ativo", timestamp: new Date().toISOString() });
 });
 
 // --- LOGIN ---

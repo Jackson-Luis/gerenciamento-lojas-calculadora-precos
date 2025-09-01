@@ -76,7 +76,7 @@ function autenticarToken(req, res, next) {
 // }
 
 
-cron.schedule("*/1 * * * *", async () => {
+cron.schedule("*/4 * * * *", async () => {
   try {
     const response = await fetch(
       "https://gerenciamento-lojas-calculadora-precos.onrender.com/test-db"

@@ -14,7 +14,7 @@ import fetch from "node-fetch"; // <- para compatibilidade (Node < 18)
 dotenv.config();
 
 const app = express();
-const port = process.env.PORT || 3001;
+// const port = process.env.PORT || 3001;
 const SECRET = process.env.JWT_SECRET || "chave_muito_secreta";
 const openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY_TESTE });
 
@@ -905,7 +905,7 @@ app.get("/health", (req, res) => {
 });
 
 // Middleware de erro (assinatura correta)
-app.use((err, req, res, next) => {
+app.use((err, req, res) => {
   console.error("Erro não tratado:", err);
   res.status(500).json({ error: "Erro interno do servidor" });
 });

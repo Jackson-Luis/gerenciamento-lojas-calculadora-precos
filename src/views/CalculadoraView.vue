@@ -3,7 +3,7 @@
     <!-- <BInputGroup prepend="R$" size="md" class="mb-3">
       <BFormInput v-model="valor" type="number" placeholder="Valor do produto em R$" min="0" style="height: 50px" />
     </BInputGroup> -->
-    <BInputGroup size="lg" prepend="R$">
+    <BInputGroup prepend="$">
       <BFormInput v-model="valor" type="number" placeholder="Valor do produto em R$" min="0" />
     </BInputGroup>
     <br />

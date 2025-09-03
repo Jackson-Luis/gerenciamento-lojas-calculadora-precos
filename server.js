@@ -31,6 +31,7 @@ app.use(
     origin: [
       "https://jackson-luis.github.io",
       "https://gerenciamento-lojas-calculadora-precos.onrender.com", // se consumir a si mesmo
+      "http://localhost:8080",
     ],
     credentials: true,
     methods: ["GET", "POST", "PUT", "DELETE", "OPTIONS"],
@@ -62,9 +63,14 @@ cron.schedule("*/4 * * * *", async () => {
   }
 });
 
-app.get("/test-db", async (req, res) => {
-  res.json({ message: "Servidor ativo", timestamp: new Date().toISOString() });
+app.get("/test-db", (req, res) => {
+  try {
+    res.json({ message: "Servidor ativo", timestamp: new Date().toISOString() });
+  } catch (err) {
+    res.status(500).json({ error: "Falha no ping", details: err.message });
+  }
 });
+
 
 // --- LOGIN ---
 app.post("/login", async (req, res) => {

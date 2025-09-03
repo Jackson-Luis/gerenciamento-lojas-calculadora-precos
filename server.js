@@ -903,6 +903,94 @@ app.get('/diag/spapi-grantless-prod', async (req, res) => {
   }
 });
 
+// === 8) Consultar estoque via Inventory API ===
+app.get("/api/amazon/inventory", async (req, res) => {
+  try {
+    const accessToken = await getAccessTokenWithRefresh();
+    console.log(accessToken )
+    const result = await spApiFetch({
+      path: "/fba/inventory/v1/summaries",
+      method: "GET",
+      query: "details=true&marketplaceIds=A2Q3Y263D00KWC", // BR marketplace
+      accessToken,
+      useSandbox: false,
+    });
+    res.json({ ok: true, inventory: result });
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: "Erro ao consultar estoque", detail: err.message });
+  }
+});
+
+// === 9) Criar solicitação de relatório de anúncios ===
+app.post("/api/amazon/reports/create", async (req, res) => {
+  try {
+    const accessToken = await getAccessTokenWithRefresh();
+    const body = {
+      reportType: "GET_FLAT_FILE_OPEN_LISTINGS_DATA",
+      marketplaceIds: ["A2Q3Y263D00KWC"], // Brasil
+    };
+
+    const result = await spApiFetch({
+      path: "/reports/2021-06-30/reports",
+      method: "POST",
+      body,
+      accessToken,
+      useSandbox: false,
+    });
+
+    res.json({ ok: true, reportRequest: result });
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: "Erro ao criar relatório", detail: err.message });
+  }
+});
+
+// === 10) Consultar status do relatório por reportId ===
+app.get("/api/amazon/reports/:reportId", async (req, res) => {
+  try {
+    const accessToken = await getAccessTokenWithRefresh();
+    const { reportId } = req.params;
+
+    const result = await spApiFetch({
+      path: `/reports/2021-06-30/reports/${reportId}`,
+      method: "GET",
+      accessToken,
+      useSandbox: false,
+    });
+
+    res.json({ ok: true, reportStatus: result });
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: "Erro ao consultar relatório", detail: err.message });
+  }
+});
+
+// === 11) Baixar conteúdo do relatório ===
+app.get("/api/amazon/reports/download/:reportDocumentId", async (req, res) => {
+  try {
+    const accessToken = await getAccessTokenWithRefresh();
+    const { reportDocumentId } = req.params;
+
+    const docMeta = await spApiFetch({
+      path: `/reports/2021-06-30/documents/${reportDocumentId}`,
+      method: "GET",
+      accessToken,
+      useSandbox: false,
+    });
+
+    // Baixar o CSV da URL fornecida pela Amazon
+    const csvResp = await fetch(docMeta.url);
+    const csvText = await csvResp.text();
+
+    res.type("text/plain").send(csvText);
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: "Erro ao baixar relatório", detail: err.message });
+  }
+});
+
+
 
 //////////////////////////////
 

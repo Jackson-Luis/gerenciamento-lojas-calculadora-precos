@@ -64,7 +64,7 @@
           </div>
           <div class="d-grid gap-2">
             <BButton type="submit" variant="success" class="w-100">Login</BButton>
-            <BButton @click="acessarCalculadora" class="w-100" variant="info">Acessar Calculadora</BButton>
+            <!-- <BButton @click="acessarCalculadora" class="w-100" variant="info">Acessar Calculadora</BButton> -->
             <BButton @click="abrirModalRecSenha" class="w-100" variant="link">Esqueci minha senha</BButton>
           </div>
         </form>

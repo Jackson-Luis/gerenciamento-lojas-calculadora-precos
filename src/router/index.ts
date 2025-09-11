@@ -29,11 +29,11 @@ const routes: Array<RouteRecordRaw> = [
     name: 'calculadora',
     component: Calculadora
   },
-  {
-    path: '/calculadora-deslogada',
-    name: 'calculadoraDeslogada',
-    component: Calculadora
-  },
+  // {
+  //   path: '/calculadora-deslogada',
+  //   name: 'calculadoraDeslogada',
+  //   component: Calculadora
+  // },
   {
     path: '/cliente',
     name: 'cliente',

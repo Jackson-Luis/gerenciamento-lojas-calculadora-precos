@@ -4,11 +4,13 @@
  * await authFetch(url, { method, body, ... })
  */
 export async function authFetch(input: RequestInfo, init: RequestInit = {}) {
-  const token = localStorage.getItem('token');
-  const headers: Record<string, string> = { ...(init.headers as Record<string, string> || {}) };
+  const token = localStorage.getItem("token");
+  const headers: Record<string, string> = {
+    ...((init.headers as Record<string, string>) || {}),
+  };
 
-  if (token && token !== 'homolog-token') {
-    headers['Authorization'] = 'Bearer ' + token;
+  if (token && token !== "homolog-token") {
+    headers["Authorization"] = "Bearer " + token;
   }
 
   // Para homologação, pode simular dados aqui se desejar
@@ -19,8 +21,16 @@ export async function authFetch(input: RequestInfo, init: RequestInit = {}) {
 /**
  * Retorna o usuário logado (objeto salvo no localStorage após login)
  */
-export function getCurrentUser(): { id: number, nome: string, email: string, cargo_superior: boolean } | null {
-  const user = localStorage.getItem('user');
+export function getCurrentUser(): {
+  id: number;
+  nome: string;
+  email: string;
+  cargo_superior: boolean;
+  administrador_geral: boolean;
+  calculadora_liberada: boolean;
+  relatorio_liberado: boolean;
+} | null {
+  const user = localStorage.getItem("user");
   if (!user) return null;
   try {
     return JSON.parse(user);

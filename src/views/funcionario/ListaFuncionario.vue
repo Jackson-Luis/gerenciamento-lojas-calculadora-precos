@@ -26,6 +26,9 @@
       <template #cell(cargo_superior)="{ item}"> 
         {{ item.cargo_superior ? 'Sim' : 'Não' }}
       </template>
+      <template #cell(isAtivo)="{ item}"> 
+        {{ item.isAtivo ? 'Sim' : 'Não' }}
+      </template>
       <template #cell(data_receber_pagamento)="{ item }">
         <BFormInput
           v-model="item.data_receber_pagamento"
@@ -121,6 +124,11 @@ interface Funcionario {
   valor_receber?: number;
   data_receber_pagamento?: string;
   chave_pix?: string;
+  calculadora_liberada?: boolean;
+  relatorio_liberado?: boolean;
+  administrador_geral?: boolean;
+  isAtivo?: boolean;
+  permissoes?: string;
 }
 
 const funcionarios = ref<Funcionario[]>([]);
@@ -153,6 +161,18 @@ const fields: TableFieldRaw<Funcionario>[] = [
   {
     key: "email",
     label: "E-mail",
+  },
+  {
+    key: "isAtivo",
+    label: "Ativo",
+  },
+  {
+    key: "permissoes",
+    label: "Permissões",
+  },
+  {
+    key: "administrador_geral",
+    label: "ADM",
   },
   {
     key: "cargo_superior",

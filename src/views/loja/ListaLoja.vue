@@ -110,6 +110,7 @@ interface Loja {
   vendas_total: number;
   funcionario_nome?: string;
   cliente_nome?: string;
+  isAtivo: boolean;
 }
 
 interface Funcionario {
@@ -201,7 +202,8 @@ const filteredItems = computed(() => {
       item.anuncios_otimizados?.toString().includes(lcFilter.value) ||
       item.visitas_semana?.toString().includes(lcFilter.value) ||
       item.produto_mais_visitado?.toLowerCase().includes(lcFilter.value) ||
-      item.vendas_total?.toString().includes(lcFilter.value)
+      item.vendas_total?.toString().includes(lcFilter.value) ||
+      (item.isAtivo ? "ativo" : "inativo").includes(lcFilter.value)
   );
 });
 const rows =  computed(() => filteredItems.value.length)

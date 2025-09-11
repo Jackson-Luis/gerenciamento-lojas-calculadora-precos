@@ -65,12 +65,14 @@ cron.schedule("*/4 * * * *", async () => {
 
 app.get("/test-db", (req, res) => {
   try {
-    res.json({ message: "Servidor ativo", timestamp: new Date().toISOString() });
+    res.json({
+      message: "Servidor ativo",
+      timestamp: new Date().toISOString(),
+    });
   } catch (err) {
     res.status(500).json({ error: "Falha no ping", details: err.message });
   }
 });
-
 
 // --- LOGIN ---
 app.post("/login", async (req, res) => {
@@ -79,19 +81,22 @@ app.post("/login", async (req, res) => {
 
   try {
     const { rows } = await pool.query(
-      "SELECT id, nome, email, senha, cargo_superior FROM funcionario WHERE email = $1 LIMIT 1",
+      "SELECT id, nome, email, senha, cargo_superior, relatorio_liberado, calculadora_liberada, administrador_geral, isAtivo FROM funcionario WHERE email = $1 LIMIT 1",
       [email]
     );
 
     if (rows.length === 0) {
-      return res.status(401).json({ error: "Email não encontrado" });
+      return res.status(401).json({ error: "E-mail ou Senha incorreta" });
     }
 
     const funcionario = rows[0];
     const senhaCorreta = await bcrypt.compare(senha, funcionario.senha);
 
     if (!senhaCorreta) {
-      return res.status(401).json({ error: "Senha incorreta" });
+      return res.status(401).json({ error: "E-mail ou Senha incorreta" });
+    }
+    if (!funcionario.isAtivo) {
+      return res.status(403).json({ error: "E-mail ou Senha incorreta" });
     }
 
     const user = {
@@ -99,6 +104,9 @@ app.post("/login", async (req, res) => {
       nome: funcionario.nome,
       email: funcionario.email,
       cargo_superior: funcionario.cargo_superior,
+      relatorio_liberado: funcionario.relatorio_liberado,
+      calculadora_liberada: funcionario.calculadora_liberada,
+      administrador_geral: funcionario.administrador_geral,
     };
 
     const token = jwt.sign(user, SECRET, { expiresIn: "1h" });
@@ -159,6 +167,10 @@ app.post("/funcionarios", autenticarToken, async (req, res) => {
     valor_receber,
     data_receber_pagamento,
     chave_pix,
+    relatorio_liberado,
+    calculadora_liberada,
+    administrador_geral,
+    isAtivo,
   } = req.body;
   try {
     if (!nome || !email || !senha)
@@ -177,8 +189,8 @@ app.post("/funcionarios", autenticarToken, async (req, res) => {
 
     const senhaHash = await bcrypt.hash(senha, 10);
     const { rows } = await pool.query(
-      `INSERT INTO funcionario (nome, telefone, email, senha, cargo_superior, valor_receber, data_receber_pagamento, chave_pix)
-       VALUES ($1, $2, $3, $4, $5, $6, $7, $8) RETURNING id`,
+      `INSERT INTO funcionario (nome, telefone, email, senha, cargo_superior, valor_receber, data_receber_pagamento, chave_pix, relatorio_liberado, calculadora_liberada, administrador_geral, isAtivo)
+       VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12) RETURNING id`,
       [
         nome,
         telefone,
@@ -188,20 +200,26 @@ app.post("/funcionarios", autenticarToken, async (req, res) => {
         valor_receber,
         data_receber_pagamento,
         chave_pix,
+        relatorio_liberado,
+        calculadora_liberada,
+        administrador_geral,
+        isAtivo,
       ]
     );
-    res
-      .status(201)
-      .json({
-        id: rows[0].id,
-        nome,
-        telefone,
-        email,
-        cargo_superior,
-        valor_receber,
-        data_receber_pagamento,
-        chave_pix,
-      });
+    res.status(201).json({
+      id: rows[0].id,
+      nome,
+      telefone,
+      email,
+      cargo_superior,
+      valor_receber,
+      data_receber_pagamento,
+      chave_pix,
+      relatorio_liberado,
+      calculadora_liberada,
+      administrador_geral,
+      isAtivo,
+    });
   } catch (err) {
     res
       .status(500)
@@ -220,6 +238,10 @@ app.put("/funcionarios/:id", autenticarToken, async (req, res) => {
     valor_receber,
     data_receber_pagamento,
     chave_pix,
+    relatorio_liberado,
+    calculadora_liberada,
+    administrador_geral,
+    isAtivo,
   } = req.body;
   try {
     if (!nome || !email)
@@ -241,9 +263,10 @@ app.put("/funcionarios/:id", autenticarToken, async (req, res) => {
       ]);
     }
     const result = await pool.query(
-      `UPDATE funcionario SET nome = $1, telefone = $2, email = $3
-        , cargo_superior = $4, valor_receber = $5, data_receber_pagamento = $6, chave_pix = $7
-        WHERE id = $8`,
+      `UPDATE funcionario SET nome = $1, telefone = $2, email = $3,
+        cargo_superior = $4, valor_receber = $5, data_receber_pagamento = $6, chave_pix = $7,
+        relatorio_liberado = $8, calculadora_liberada = $9, administrador_geral = $10, isAtivo = $11
+        WHERE id = $12`,
       [
         nome,
         telefone,
@@ -252,6 +275,10 @@ app.put("/funcionarios/:id", autenticarToken, async (req, res) => {
         valor_receber,
         data_receber_pagamento,
         chave_pix,
+        relatorio_liberado,
+        calculadora_liberada,
+        administrador_geral,
+        isAtivo,
         id,
       ]
     );
@@ -265,6 +292,10 @@ app.put("/funcionarios/:id", autenticarToken, async (req, res) => {
         valor_receber,
         data_receber_pagamento,
         chave_pix,
+        relatorio_liberado,
+        calculadora_liberada,
+        administrador_geral,
+        isAtivo,
       });
     } else {
       res.status(404).json({ error: "Funcionário não encontrado" });
@@ -314,12 +345,12 @@ app.get("/clientes", autenticarToken, async (req, res) => {
 
 app.post("/clientes", autenticarToken, async (req, res) => {
   try {
-    const { nome, telefone } = req.body;
+    const { nome, telefone, isAtivo } = req.body;
     const result = await pool.query(
-      "INSERT INTO cliente (nome, telefone) VALUES ($1, $2) RETURNING id",
-      [nome, telefone]
+      "INSERT INTO cliente (nome, telefone, isAtivo) VALUES ($1, $2, $3) RETURNING id",
+      [nome, telefone, isAtivo]
     );
-    res.status(201).json({ id: result.rows[0].id, nome, telefone });
+    res.status(201).json({ id: result.rows[0].id, nome, telefone, isAtivo });
   } catch (err) {
     res
       .status(500)
@@ -330,10 +361,10 @@ app.post("/clientes", autenticarToken, async (req, res) => {
 app.put("/clientes/:id", autenticarToken, async (req, res) => {
   try {
     const id = parseInt(req.params.id, 10);
-    const { nome, telefone } = req.body;
+    const { nome, telefone, isAtivo } = req.body;
     const result = await pool.query(
-      "UPDATE cliente SET nome=$1, telefone=$2 WHERE id=$3",
-      [nome, telefone, id]
+      "UPDATE cliente SET nome=$1, telefone=$2, isAtivo=$3 WHERE id=$4",
+      [nome, telefone, isAtivo, id]
     );
     if (result.rowCount) {
       res.json({ id, nome, telefone });
@@ -401,12 +432,13 @@ app.post("/lojas", autenticarToken, async (req, res) => {
     visitas_semana,
     produto_mais_visitado,
     vendas_total,
+    isAtivo,
   } = req.body;
   try {
     const result = await pool.query(
       `
-      INSERT INTO loja (funcionario_id, cliente_id, nome, anuncios_total, anuncios_realizados, anuncios_otimizados, visitas_semana, produto_mais_visitado, vendas_total)
-      VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9) RETURNING id
+      INSERT INTO loja (funcionario_id, cliente_id, nome, anuncios_total, anuncios_realizados, anuncios_otimizados, visitas_semana, produto_mais_visitado, vendas_total, isAtivo)
+      VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10) RETURNING id
     `,
       [
         funcionario_id,
@@ -418,6 +450,7 @@ app.post("/lojas", autenticarToken, async (req, res) => {
         visitas_semana,
         produto_mais_visitado,
         vendas_total,
+        isAtivo,
       ]
     );
     res.status(201).json({ id: result.rows[0].id });
@@ -438,11 +471,12 @@ app.put("/lojas/:id", autenticarToken, async (req, res) => {
     visitas_semana,
     produto_mais_visitado,
     vendas_total,
+    isAtivo,
   } = req.body;
   try {
     const result = await pool.query(
       `
-      UPDATE loja SET funcionario_id=$1, cliente_id=$2, nome=$3, anuncios_total=$4, anuncios_realizados=$5, anuncios_otimizados=$6, visitas_semana=$7, produto_mais_visitado=$8, vendas_total=$9 WHERE id=$10
+      UPDATE loja SET funcionario_id=$1, cliente_id=$2, nome=$3, anuncios_total=$4, anuncios_realizados=$5, anuncios_otimizados=$6, visitas_semana=$7, produto_mais_visitado=$8, vendas_total=$9, isAtivo=$10 WHERE id=$11
     `,
       [
         funcionario_id,
@@ -454,6 +488,7 @@ app.put("/lojas/:id", autenticarToken, async (req, res) => {
         visitas_semana,
         produto_mais_visitado,
         vendas_total,
+        isAtivo,
         id,
       ]
     );
@@ -488,12 +523,10 @@ app.post("/enviar-email", async (req, res) => {
     const { html, para } = req.body;
 
     if (!para || !html) {
-      return res
-        .status(400)
-        .json({
-          ok: false,
-          message: 'Parâmetros "para" e "html" são obrigatórios.',
-        });
+      return res.status(400).json({
+        ok: false,
+        message: 'Parâmetros "para" e "html" são obrigatórios.',
+      });
     }
 
     await enviarEmail({ to: para, html });
@@ -566,12 +599,10 @@ app.post("/api/preencher", async (req, res) => {
     res.json(json);
   } catch (err) {
     console.error("Erro ao fazer parse do JSON:", err.message);
-    res
-      .status(500)
-      .json({
-        error: "Erro ao interpretar JSON retornado pela IA.",
-        raw: texto,
-      });
+    res.status(500).json({
+      error: "Erro ao interpretar JSON retornado pela IA.",
+      raw: texto,
+    });
   }
 });
 
@@ -660,7 +691,7 @@ async function spApiFetch({
     headers: {
       host,
       "content-type": "application/json",
-      "x-amz-access-token": accessToken
+      "x-amz-access-token": accessToken,
     },
     body: body ? JSON.stringify(body) : undefined,
   };
@@ -807,12 +838,10 @@ app.post("/api/amazon/sandbox/process", async (req, res) => {
     res.json({ ok: true, environment: "SANDBOX", ia: iaJson, spapi_check: sp });
   } catch (err) {
     console.error(err);
-    res
-      .status(500)
-      .json({
-        error: "Falha em /api/amazon/sandbox/process",
-        detail: err.message,
-      });
+    res.status(500).json({
+      error: "Falha em /api/amazon/sandbox/process",
+      detail: err.message,
+    });
   }
 });
 
@@ -823,7 +852,7 @@ app.post("/api/amazon/prod/process", async (req, res) => {
 
   try {
     const iaJson = await gerarConteudoIAComMesmoMolde(prompt);
-    console.log(await gerarConteudoIAComMesmoMolde(prompt))
+    console.log(await gerarConteudoIAComMesmoMolde(prompt));
     const accessToken = await getAccessTokenWithRefresh();
 
     // Exemplo seguro em produção: sellers participations (autorizado)
@@ -842,17 +871,14 @@ app.post("/api/amazon/prod/process", async (req, res) => {
     });
   } catch (err) {
     console.error(err);
-    res
-      .status(500)
-      .json({
-        error: "Falha em /api/amazon/prod/process",
-        detail: err.message,
-      });
+    res.status(500).json({
+      error: "Falha em /api/amazon/prod/process",
+      detail: err.message,
+    });
   }
 });
 
-
-app.get('/callback', async (req, res) => {
+app.get("/callback", async (req, res) => {
   const authCode = req.query.code;
 
   if (!authCode) {
@@ -870,8 +896,9 @@ app.get('/callback', async (req, res) => {
         code: authCode,
         client_id: process.env.LWA_CLIENT_ID,
         client_secret: process.env.LWA_CLIENT_SECRET,
-        redirect_uri: "https://gerenciamento-lojas-calculadora-precos.onrender.com/callback"
-      })
+        redirect_uri:
+          "https://gerenciamento-lojas-calculadora-precos.onrender.com/callback",
+      }),
     });
 
     const data = await response.json();
@@ -886,16 +913,17 @@ app.get('/callback', async (req, res) => {
   }
 });
 
-
 // rota temporária só p/ diagnóstico
-app.get('/diag/spapi-grantless-prod', async (req, res) => {
+app.get("/diag/spapi-grantless-prod", async (req, res) => {
   try {
-    const accessToken = await getGrantlessAccessToken(['sellingpartnerapi::notifications']);
+    const accessToken = await getGrantlessAccessToken([
+      "sellingpartnerapi::notifications",
+    ]);
     const r = await spApiFetch({
-      path: '/notifications/v1/destinations',
-      method: 'GET',
+      path: "/notifications/v1/destinations",
+      method: "GET",
       accessToken,
-      useSandbox: false
+      useSandbox: false,
     });
     res.json({ ok: true, r });
   } catch (e) {
@@ -907,7 +935,7 @@ app.get('/diag/spapi-grantless-prod', async (req, res) => {
 app.get("/api/amazon/inventory", async (req, res) => {
   try {
     const accessToken = await getAccessTokenWithRefresh();
-    console.log(accessToken )
+    console.log(accessToken);
     const result = await spApiFetch({
       path: "/fba/inventory/v1/summaries",
       method: "GET",
@@ -918,7 +946,9 @@ app.get("/api/amazon/inventory", async (req, res) => {
     res.json({ ok: true, inventory: result });
   } catch (err) {
     console.error(err);
-    res.status(500).json({ error: "Erro ao consultar estoque", detail: err.message });
+    res
+      .status(500)
+      .json({ error: "Erro ao consultar estoque", detail: err.message });
   }
 });
 
@@ -942,7 +972,9 @@ app.post("/api/amazon/reports/create", async (req, res) => {
     res.json({ ok: true, reportRequest: result });
   } catch (err) {
     console.error(err);
-    res.status(500).json({ error: "Erro ao criar relatório", detail: err.message });
+    res
+      .status(500)
+      .json({ error: "Erro ao criar relatório", detail: err.message });
   }
 });
 
@@ -962,7 +994,9 @@ app.get("/api/amazon/reports/:reportId", async (req, res) => {
     res.json({ ok: true, reportStatus: result });
   } catch (err) {
     console.error(err);
-    res.status(500).json({ error: "Erro ao consultar relatório", detail: err.message });
+    res
+      .status(500)
+      .json({ error: "Erro ao consultar relatório", detail: err.message });
   }
 });
 
@@ -986,11 +1020,11 @@ app.get("/api/amazon/reports/download/:reportDocumentId", async (req, res) => {
     res.type("text/plain").send(csvText);
   } catch (err) {
     console.error(err);
-    res.status(500).json({ error: "Erro ao baixar relatório", detail: err.message });
+    res
+      .status(500)
+      .json({ error: "Erro ao baixar relatório", detail: err.message });
   }
 });
-
-
 
 //////////////////////////////
 

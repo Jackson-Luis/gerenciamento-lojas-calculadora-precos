@@ -121,9 +121,9 @@ const login = async () => {
     console.error(err);
   }
 };
-const acessarCalculadora = () => {
-  router.push("/calculadora-deslogada");
-};
+// const acessarCalculadora = () => {
+//   router.push("/calculadora-deslogada");
+// };
 </script>
 
 <style>

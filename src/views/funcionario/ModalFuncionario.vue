@@ -1,7 +1,7 @@
 <template>
-    <BModal v-model="showModal" :title="form.id ? 'Atualizar Funcionário' : 'Cadastrar novo Funcionário'" ok-title="Salvar" cancel-title="Cancelar" @ok="cadastrarOuEditar"
-        :ok-disabled="isLoading" no-footer>
-         <form @submit.prevent="cadastrarOuEditar">
+    <BModal v-model="showModal" :title="form.id ? 'Atualizar Funcionário' : 'Cadastrar novo Funcionário'"
+        ok-title="Salvar" cancel-title="Cancelar" @ok="cadastrarOuEditar" :ok-disabled="isLoading" no-footer>
+        <form @submit.prevent="cadastrarOuEditar">
             <div class="mb-2">
                 <label>Nome:</label>
                 <input v-model="form.nome" class="form-control" required />
@@ -24,8 +24,23 @@
                 <input v-model="form.telefone" class="form-control" @input="maskTelefone" maxlength="15" />
             </div>
             <div class="mb-2">
-                <BFormCheckbox switch v-model="form.cargo_superior">Cargo Superior</BFormCheckbox>
+                <BFormCheckbox switch v-model="form.calculadora_liberada">Acesso à Calculadora</BFormCheckbox>
             </div>
+            <div v-if="administrador_geral == true">
+                <div class="mb-2">
+                    <BFormCheckbox switch v-model="form.cargo_superior">Cargo Superior</BFormCheckbox>
+                </div>
+                <div class="mb-2">
+                    <BFormCheckbox switch v-model="form.relatorio_liberado">Acesso aos relatórios</BFormCheckbox>
+                </div>
+                <div class="mb-2">
+                    <BFormCheckbox switch v-model="form.administrador_geral">Administrador Geral</BFormCheckbox>
+                </div>
+                <div class="mb-2">
+                    <BFormCheckbox switch v-model="form.isAtivo">Ativo</BFormCheckbox>
+                </div>
+            </div>
+
             <hr />
             <div class="mb-2 d-flex justify-content-end">
                 <BButton class="btn btn-success" type="submit">{{ form.id ? 'Atualizar' : 'Adicionar' }}</BButton>
@@ -35,18 +50,22 @@
     </BModal>
 </template>
 <script setup lang="ts">
-import { reactive, ref, watch, defineProps, defineEmits } from 'vue'
+import { reactive, ref, watch, defineProps, defineEmits, onMounted } from 'vue'
 import { BButton, BModal, BFormCheckbox } from 'bootstrap-vue-next'
-import { authFetch } from '@/api/authFetch'
+import { authFetch, getCurrentUser } from '@/api/authFetch'
 
 interface Funcionario {
-  id?: number | null
-  nome: string
-  telefone: string
-  email: string
-  senha: string 
-  cargo_superior: boolean
-  chave_pix: string
+    id?: number | null
+    nome: string
+    telefone: string
+    email: string
+    senha: string
+    cargo_superior: boolean
+    chave_pix: string
+    calculadora_liberada: boolean
+    relatorio_liberado: boolean
+    administrador_geral: boolean
+    isAtivo: boolean
 }
 
 const props = defineProps<{
@@ -68,13 +87,17 @@ const form = reactive({
     chave_pix: '',
     telefone: '',
     cargo_superior: false,
+    calculadora_liberada: false,
+    relatorio_liberado: false,
+    administrador_geral: false,
+    isAtivo: false
 })
 watch(() => props.modelValue, (newVal) => {
     showModal.value = newVal
 })
 watch(() => showModal.value, (newVal) => {
     emit('update:modelValue', newVal)
-     if(props.edicaoFuncionario && props.edicaoFuncionario.id) {
+    if (props.edicaoFuncionario && props.edicaoFuncionario.id) {
         form.id = props.edicaoFuncionario.id
         form.nome = props.edicaoFuncionario.nome
         form.telefone = props.edicaoFuncionario.telefone
@@ -82,6 +105,10 @@ watch(() => showModal.value, (newVal) => {
         form.senha = props.edicaoFuncionario.senha
         form.chave_pix = props.edicaoFuncionario.chave_pix
         form.cargo_superior = props.edicaoFuncionario.cargo_superior
+        form.calculadora_liberada = props.edicaoFuncionario.calculadora_liberada
+        form.relatorio_liberado = props.edicaoFuncionario.relatorio_liberado
+        form.administrador_geral = props.edicaoFuncionario.administrador_geral
+        form.isAtivo = props.edicaoFuncionario.isAtivo
     } else {
         reset()
     }
@@ -100,6 +127,10 @@ function reset() {
     form.chave_pix = ''
     form.telefone = ''
     form.cargo_superior = false
+    form.calculadora_liberada = false
+    form.relatorio_liberado = false
+    form.administrador_geral = false
+    form.isAtivo = false
     error.value = ''
 }
 
@@ -136,5 +167,13 @@ async function cadastrarOuEditar() {
         isLoading.value = false
     }
 }
+
+const administrador_geral = ref(false);
+onMounted(() => {
+    const user = getCurrentUser();
+    if (user && user.administrador_geral) {
+        administrador_geral.value = true;
+    }
+});
 
 </script>

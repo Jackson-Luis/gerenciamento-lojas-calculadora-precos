@@ -81,7 +81,7 @@ app.post("/login", async (req, res) => {
 
   try {
     const { rows } = await pool.query(
-      "SELECT id, nome, email, senha, cargo_superior, relatorio_liberado, calculadora_liberada, administrador_geral, isAtivo FROM funcionario WHERE email = $1 LIMIT 1",
+      "SELECT id, nome, email, senha, cargo_superior, relatorio_liberado, calculadora_liberada, administrador_geral FROM funcionario WHERE email = $1 LIMIT 1",
       [email]
     );
 

@@ -95,9 +95,9 @@ app.post("/login", async (req, res) => {
     if (!senhaCorreta) {
       return res.status(401).json({ error: "E-mail ou Senha incorreta" });
     }
-    if (!funcionario.isAtivo) {
-      return res.status(403).json({ error: "E-mail ou Senha incorreta" });
-    }
+    // if (!funcionario.isAtivo) {
+    //   return res.status(403).json({ error: "E-mail ou Senha incorreta" });
+    // }
 
     const user = {
       id: funcionario.id,

@@ -173,7 +173,7 @@ app.post("/funcionarios", autenticarToken, async (req, res) => {
     is_ativo,
   } = req.body;
   try {
-    if (!nome || !email || !senha)
+    if (!nome || !email )
       return res
         .status(400)
         .json({ error: "Nome, email e senha são obrigatórios" });
@@ -254,23 +254,29 @@ app.put("/funcionarios/:id", autenticarToken, async (req, res) => {
       return res
         .status(400)
         .json({ error: "Email já está em uso por outro funcionário." });
+
+    // Busca a senha atual do funcionário
     let senhaHash = null;
-    if (senha) {
+    if (senha && senha.trim() !== "") {
       senhaHash = await bcrypt.hash(senha, 10);
-      await pool.query("UPDATE funcionario SET senha = $1 WHERE id = $2", [
-        senhaHash,
-        id,
-      ]);
+    } else {
+      const { rows: userRows } = await pool.query(
+        "SELECT senha FROM funcionario WHERE id = $1",
+        [id]
+      );
+      senhaHash = userRows.length ? userRows[0].senha : null;
     }
+
     const result = await pool.query(
       `UPDATE funcionario SET nome = $1, telefone = $2, email = $3,
-        cargo_superior = $4, valor_receber = $5, data_receber_pagamento = $6, chave_pix = $7,
-        relatorio_liberado = $8, calculadora_liberada = $9, administrador_geral = $10, is_ativo = $11
-        WHERE id = $12`,
+        senha = $4, cargo_superior = $5, valor_receber = $6, data_receber_pagamento = $7, chave_pix = $8,
+        relatorio_liberado = $9, calculadora_liberada = $10, administrador_geral = $11, is_ativo = $12
+        WHERE id = $13`,
       [
         nome,
         telefone,
         email,
+        senhaHash,
         cargo_superior,
         valor_receber,
         data_receber_pagamento,

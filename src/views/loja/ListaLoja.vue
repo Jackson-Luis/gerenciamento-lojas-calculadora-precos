@@ -29,8 +29,8 @@
     <template #cell(cliente_id)="{ item }">
       {{ item.cliente_nome }}
     </template>
-      <template #cell(isAtivo)="{ item }">
-        {{ item.isAtivo ? 'Sim' : 'Não' }}
+      <template #cell(is_ativo)="{ item }">
+        {{ item.is_ativo ? 'Sim' : 'Não' }}
       </template>
       <template #cell(actions)="{ item }">
         <BDropdown
@@ -113,7 +113,7 @@ interface Loja {
   vendas_total: number;
   funcionario_nome?: string;
   cliente_nome?: string;
-  isAtivo: boolean;
+  is_ativo: boolean;
 }
 
 interface Funcionario {
@@ -181,7 +181,7 @@ const fields: TableFieldRaw<Loja>[] = [
     label: "Vendas totais",
   },
   {
-    key: "isAtivo",
+    key: "is_ativo",
     label: "Ativo",
   },
   {
@@ -210,7 +210,7 @@ const filteredItems = computed(() => {
       item.visitas_semana?.toString().includes(lcFilter.value) ||
       item.produto_mais_visitado?.toLowerCase().includes(lcFilter.value) ||
       item.vendas_total?.toString().includes(lcFilter.value) ||
-      (item.isAtivo ? "ativo" : "inativo").includes(lcFilter.value)
+      (item.is_ativo ? "ativo" : "inativo").includes(lcFilter.value)
   );
 });
 const rows =  computed(() => filteredItems.value.length)

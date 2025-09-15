@@ -11,7 +11,7 @@
                 <input v-model="form.telefone" required class="form-control" @input="maskTelefone" maxlength="15" />
             </div>
             <div class="mb-2">
-                <BFormCheckbox switch v-model="form.isAtivo">Ativo</BFormCheckbox>
+                <BFormCheckbox switch v-model="form.is_ativo">Ativo</BFormCheckbox>
             </div>
             <hr />
             <div class="mb-2 d-flex justify-content-end">
@@ -30,7 +30,23 @@ interface Cliente {
   id?: number | null
   nome: string
   telefone: string
-  isAtivo: boolean
+  is_ativo: boolean
+}
+
+interface Loja {
+  id?: number
+  nome: string
+  funcionario_id: number
+  cliente_id: number
+  funcionario_nome?: string
+  cliente_nome?: string
+  anuncios_total: number;
+  anuncios_realizados: number;
+  anuncios_otimizados: number;
+  visitas_semana: number;
+  produto_mais_visitado: string;
+  vendas_total: number;
+  is_ativo: boolean;
 }
 
 const props = defineProps<{
@@ -48,7 +64,7 @@ const form = reactive({
     id: undefined as number | undefined,
     nome: '',
     telefone: '',
-    isAtivo: true,
+    is_ativo: true,
 })
 
 watch(() => props.modelValue, (newVal) => {
@@ -61,7 +77,7 @@ watch(() => showModal.value, (newVal) => {
         form.id = props.edicaoCliente.id
         form.nome = props.edicaoCliente.nome
         form.telefone = props.edicaoCliente.telefone
-        form.isAtivo = props.edicaoCliente.isAtivo ?? true
+        form.is_ativo = props.edicaoCliente.is_ativo
     } else {
         reset()
     }
@@ -76,7 +92,7 @@ function reset() {
     form.id = undefined
     form.nome = ''
     form.telefone = ''
-    form.isAtivo = true
+    form.is_ativo = true
 }
 function maskTelefone(event: Event) {
     const input = event.target as HTMLInputElement
@@ -90,6 +106,24 @@ async function cadastrarOuEditar() {
         if (form.id) {
             url = `https://gerenciamento-lojas-calculadora-precos.onrender.com/clientes/${form.id}`;
             method = 'PUT';
+
+            if (form.is_ativo) {
+                let lojas = await authFetch(`https://gerenciamento-lojas-calculadora-precos.onrender.com/lojas`)
+                let lojasData = await lojas.json();
+                lojasData = lojasData.filter((l: Loja) => l.cliente_id === form.id);
+                lojasData.forEach((l: Loja) => {
+                    if(form.is_ativo) {
+                        l.is_ativo = true;
+                    } else {
+                        l.is_ativo = false;
+                    }
+                })
+                await authFetch('https://gerenciamento-lojas-calculadora-precos.onrender.com/lojas' ,{
+                    method: 'PUT',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(lojasData)
+                })
+            }
         }
         await authFetch(url, {
             method,

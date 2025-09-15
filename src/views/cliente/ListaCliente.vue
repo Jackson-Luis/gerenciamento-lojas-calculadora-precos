@@ -23,8 +23,8 @@
       :multisort="true"
       class="table table-bordered"
     >
-      <template #cell(isAtivo)="{ item }">
-        {{ item.isAtivo ? 'Sim' : 'Não' }}
+      <template #cell(is_ativo)="{ item }">
+        {{ item.is_ativo ? 'Sim' : 'Não' }}
       </template>
       <template #cell(actions)="{ item }">
         <BDropdown
@@ -85,7 +85,6 @@ import {
   BPagination,
   BTable,
   BFormSelect,
-  TableFieldRaw,
   BFormInput,
 } from "bootstrap-vue-next";
 import ToastAlert from "@/components/ToastAlert.vue";
@@ -96,7 +95,7 @@ interface Cliente {
   id: number;
   nome: string;
   telefone: string;
-  isAtivo: boolean;
+  is_ativo: boolean;
 }
 
 const clientes = ref<Cliente[]>([]);
@@ -126,7 +125,7 @@ const fields = [
     label: "Telefone",
   },
   {
-    key: "isAtivo",
+    key: "is_ativo",
     label: "Ativo",
   },
   {
@@ -148,7 +147,7 @@ const filteredItems = computed(() => {
     (item) =>
       item.nome.toLowerCase().includes(lcFilter.value) ||
       item.telefone.toLowerCase().includes(lcFilter.value) ||
-      (item.isAtivo ? "ativo" : "inativo").includes(lcFilter.value)
+      (item.is_ativo ? "ativo" : "inativo").includes(lcFilter.value)
   );
 });
 const rows = computed(() => filteredItems.value.length);

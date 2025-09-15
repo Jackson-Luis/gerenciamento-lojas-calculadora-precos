@@ -21,7 +21,7 @@
                 </select>
             </div>
             <div class="mb-2">
-                <BFormCheckbox switch v-model="form.isAtivo">Ativo</BFormCheckbox>
+                <BFormCheckbox switch v-model="form.is_ativo">Ativo</BFormCheckbox>
             </div>
             <div class="mb-2 d-flex justify-content-end">
                 <BButton class="btn btn-success" type="submit">{{ form.id ? 'Atualizar' : 'Adicionar' }}</BButton>
@@ -50,7 +50,7 @@ interface Loja {
   visitas_semana: number;
   produto_mais_visitado: string;
   vendas_total: number;
-  isAtivo: boolean;
+  is_ativo: boolean;
 }
 
 const props = defineProps<{
@@ -83,7 +83,7 @@ const form = reactive({
   visitas_semana: 0,
   produto_mais_visitado: "",
   vendas_total: 0,
-  isAtivo: true,
+  is_ativo: true,
 });
 
 
@@ -110,7 +110,7 @@ watch(
       form.visitas_semana = props.edicaoLoja.visitas_semana;
       form.produto_mais_visitado = props.edicaoLoja.produto_mais_visitado;
       form.vendas_total = props.edicaoLoja.vendas_total;
-      form.isAtivo = props.edicaoLoja.isAtivo ?? true;
+      form.is_ativo = props.edicaoLoja.is_ativo ?? true;
     } else {
       reset();
     }
@@ -127,7 +127,7 @@ function reset() {
   form.nome = "";
   form.funcionario_id = funcionarioNaoAdmin.value;
   form.cliente_id = null;
-  form.isAtivo = true;
+  form.is_ativo = true;
   error.value = "";
 }
 

@@ -7,12 +7,12 @@
     <div v-if="loading">Carregando...</div>
     <div v-else>
       <BTable
-        v-if="lojas.length"
+        v-if="lojasAtivas.length"
         :bordered="true"
         :outlined="true"
         :hover="true"
         :fixed="true"
-        :items="lojas"
+        :items="lojasAtivas"
         :fields="fields"
       >
         <template #cell(funcionario_nome)="{ item }">
@@ -48,7 +48,7 @@
 </template>
 
 <script setup lang="ts">
-import { ref, onMounted } from "vue";
+import { ref, onMounted, computed } from "vue";
 import { BTable } from "bootstrap-vue-next";
 import { saveAs } from "file-saver";
 import ExcelJS from "exceljs";
@@ -78,11 +78,13 @@ interface Loja {
   visitas_semana: number;
   produto_mais_visitado: string;
   vendas_total: number;
-  isAtivo: boolean;
+  is_ativo: boolean;
 }
 
 const lojas = ref<Loja[]>([]);
 const loading = ref(true);
+
+const lojasAtivas = computed(() => lojas.value.filter(l => l.is_ativo));
 
 async function carregarLojas() {
   loading.value = true;

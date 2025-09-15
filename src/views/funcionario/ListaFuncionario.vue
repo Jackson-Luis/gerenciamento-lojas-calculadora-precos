@@ -26,8 +26,8 @@
       <template #cell(cargo_superior)="{ item}"> 
         {{ item.cargo_superior ? 'Sim' : 'Não' }}
       </template>
-      <template #cell(isAtivo)="{ item}"> 
-        {{ item.isAtivo ? 'Sim' : 'Não' }}
+      <template #cell(is_ativo)="{ item}"> 
+        {{ item.is_ativo ? 'Sim' : 'Não' }}
       </template>
       <template #cell(data_receber_pagamento)="{ item }">
         <BFormInput
@@ -127,7 +127,7 @@ interface Funcionario {
   calculadora_liberada?: boolean;
   relatorio_liberado?: boolean;
   administrador_geral?: boolean;
-  isAtivo?: boolean;
+  is_ativo?: boolean;
   permissoes?: string;
 }
 
@@ -163,7 +163,7 @@ const fields: TableFieldRaw<Funcionario>[] = [
     label: "E-mail",
   },
   {
-    key: "isAtivo",
+    key: "is_ativo",
     label: "Ativo",
   },
   {
@@ -214,7 +214,8 @@ const filteredItems = computed(() => {
       item.valor_receber?.toString().includes(lcFilter.value) ||
       item.data_receber_pagamento?.toLowerCase().includes(lcFilter.value) ||
       item.chave_pix?.toLowerCase().includes(lcFilter.value) ||
-      (item.isAtivo ? "ativo" : "inativo").includes(lcFilter.value)
+      (item.is_ativo ? "ativo" : "inativo").includes(lcFilter.value) ||
+      item.permissoes?.toLowerCase().includes(lcFilter.value)
   );
 });
 const rows =  computed(() => filteredItems.value.length)
@@ -238,7 +239,19 @@ async function carregar() {
     ...r,
     cargo_superior: !!r.cargo_superior,
   }));
+  console.log(funcionarios.value)
   funcionarios.value.sort((a, b) => a.nome.localeCompare(b.nome));
+  
+    funcionarios.value.forEach(f => {
+      if (f.calculadora_liberada) {
+        f.permissoes = "Calculadora";
+        if (f.relatorio_liberado) {
+        f.permissoes = f.permissoes + ", Relatório";
+      }
+      } else if (f.relatorio_liberado) {
+        f.permissoes = "Relatório";
+      }
+    });
 }
 
 function novo() {

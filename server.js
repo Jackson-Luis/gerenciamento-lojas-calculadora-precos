@@ -367,7 +367,7 @@ app.put("/clientes/:id", autenticarToken, async (req, res) => {
       [nome, telefone, is_ativo, id]
     );
     if (result.rowCount) {
-      res.json({ id, nome, telefone });
+      res.json({ id, nome, telefone, is_ativo });
     } else {
       res.status(404).json({ error: "Cliente não encontrado" });
     }

@@ -10,11 +10,17 @@
                 <label>Email:</label>
                 <input v-model="form.email" class="form-control" type="email" required />
             </div>
-            <div class="mb-2">
+            <!-- Campo de senha só aparece ao criar novo funcionário -->
+            <div class="mb-2" v-if="!form.id">
                 <label>Senha:</label>
-                <input v-model="form.senha" class="form-control" type="password" :required="!form.id"
-                    autocomplete="new-password" />
+                <input v-model="form.senha" class="form-control" type="password" required autocomplete="new-password" />
             </div>
+            <!--
+            <div class="mb-2" v-else>
+                <label>Senha:</label>
+                <input class="form-control" type="password" disabled placeholder="Só pode ser alterada na tela de alteração de senha" />
+            </div>
+            -->
             <div class="mb-2">
                 <label>Chave Pix:</label>
                 <input v-model="form.chave_pix" class="form-control" />
@@ -27,9 +33,6 @@
                 <BFormCheckbox switch v-model="form.calculadora_liberada">Acesso à Calculadora</BFormCheckbox>
             </div>
             <div v-if="administrador_geral == true">
-                <div class="mb-2">
-                    <BFormCheckbox switch v-model="form.cargo_superior">Cargo Superior</BFormCheckbox>
-                </div>
                 <div class="mb-2">
                     <BFormCheckbox switch v-model="form.relatorio_liberado">Acesso aos relatórios</BFormCheckbox>
                 </div>
@@ -60,7 +63,6 @@ interface Funcionario {
     telefone: string
     email: string
     senha: string
-    cargo_superior: boolean
     chave_pix: string
     calculadora_liberada: boolean
     relatorio_liberado: boolean
@@ -86,7 +88,6 @@ const form = reactive({
     senha: '',
     chave_pix: '',
     telefone: '',
-    cargo_superior: false,
     calculadora_liberada: false,
     relatorio_liberado: false,
     administrador_geral: false,
@@ -102,9 +103,8 @@ watch(() => showModal.value, (newVal) => {
         form.nome = props.edicaoFuncionario.nome
         form.telefone = props.edicaoFuncionario.telefone
         form.email = props.edicaoFuncionario.email
-        form.senha = props.edicaoFuncionario.senha
+        // form.senha = props.edicaoFuncionario.senha // Não preenche senha em edição
         form.chave_pix = props.edicaoFuncionario.chave_pix
-        form.cargo_superior = props.edicaoFuncionario.cargo_superior
         form.calculadora_liberada = props.edicaoFuncionario.calculadora_liberada
         form.relatorio_liberado = props.edicaoFuncionario.relatorio_liberado
         form.administrador_geral = props.edicaoFuncionario.administrador_geral
@@ -126,7 +126,6 @@ function reset() {
     form.senha = ''
     form.chave_pix = ''
     form.telefone = ''
-    form.cargo_superior = false
     form.calculadora_liberada = false
     form.relatorio_liberado = false
     form.administrador_geral = false

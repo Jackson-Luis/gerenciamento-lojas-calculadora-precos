@@ -81,7 +81,7 @@ app.post("/login", async (req, res) => {
 
   try {
     const { rows } = await pool.query(
-      "SELECT id, nome, email, senha, cargo_superior, relatorio_liberado, calculadora_liberada, administrador_geral FROM funcionario WHERE email = $1 LIMIT 1",
+      "SELECT id, nome, email, senha, relatorio_liberado, calculadora_liberada, administrador_geral FROM funcionario WHERE email = $1 LIMIT 1",
       [email]
     );
 
@@ -103,7 +103,6 @@ app.post("/login", async (req, res) => {
       id: funcionario.id,
       nome: funcionario.nome,
       email: funcionario.email,
-      cargo_superior: funcionario.cargo_superior,
       relatorio_liberado: funcionario.relatorio_liberado,
       calculadora_liberada: funcionario.calculadora_liberada,
       administrador_geral: funcionario.administrador_geral,
@@ -163,7 +162,6 @@ app.post("/funcionarios", autenticarToken, async (req, res) => {
     telefone,
     email,
     senha,
-    cargo_superior,
     valor_receber,
     data_receber_pagamento,
     chave_pix,
@@ -189,14 +187,13 @@ app.post("/funcionarios", autenticarToken, async (req, res) => {
 
     const senhaHash = await bcrypt.hash(senha, 10);
     const { rows } = await pool.query(
-      `INSERT INTO funcionario (nome, telefone, email, senha, cargo_superior, valor_receber, data_receber_pagamento, chave_pix, relatorio_liberado, calculadora_liberada, administrador_geral, is_ativo)
-       VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12) RETURNING id`,
+      `INSERT INTO funcionario (nome, telefone, email, senha, valor_receber, data_receber_pagamento, chave_pix, relatorio_liberado, calculadora_liberada, administrador_geral, is_ativo)
+       VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11) RETURNING id`,
       [
         nome,
         telefone,
         email,
         senhaHash,
-        cargo_superior,
         valor_receber,
         data_receber_pagamento,
         chave_pix,
@@ -211,7 +208,6 @@ app.post("/funcionarios", autenticarToken, async (req, res) => {
       nome,
       telefone,
       email,
-      cargo_superior,
       valor_receber,
       data_receber_pagamento,
       chave_pix,
@@ -233,8 +229,7 @@ app.put("/funcionarios/:id", autenticarToken, async (req, res) => {
     nome,
     telefone,
     email,
-    senha,
-    cargo_superior,
+    // senha, // Removido do update
     valor_receber,
     data_receber_pagamento,
     chave_pix,
@@ -255,29 +250,15 @@ app.put("/funcionarios/:id", autenticarToken, async (req, res) => {
         .status(400)
         .json({ error: "Email já está em uso por outro funcionário." });
 
-    // Busca a senha atual do funcionário
-    let senhaHash = null;
-    if (senha && senha.trim() !== "") {
-      senhaHash = await bcrypt.hash(senha, 10);
-    } else {
-      const { rows: userRows } = await pool.query(
-        "SELECT senha FROM funcionario WHERE id = $1",
-        [id]
-      );
-      senhaHash = userRows.length ? userRows[0].senha : null;
-    }
-
     const result = await pool.query(
       `UPDATE funcionario SET nome = $1, telefone = $2, email = $3,
-        senha = $4, cargo_superior = $5, valor_receber = $6, data_receber_pagamento = $7, chave_pix = $8,
-        relatorio_liberado = $9, calculadora_liberada = $10, administrador_geral = $11, is_ativo = $12
-        WHERE id = $13`,
+        valor_receber = $4, data_receber_pagamento = $5, chave_pix = $6,
+        relatorio_liberado = $7, calculadora_liberada = $8, administrador_geral = $9, is_ativo = $10
+        WHERE id = $11`,
       [
         nome,
         telefone,
         email,
-        senhaHash,
-        cargo_superior,
         valor_receber,
         data_receber_pagamento,
         chave_pix,
@@ -294,7 +275,6 @@ app.put("/funcionarios/:id", autenticarToken, async (req, res) => {
         nome,
         telefone,
         email,
-        cargo_superior,
         valor_receber,
         data_receber_pagamento,
         chave_pix,
@@ -372,6 +352,20 @@ app.put("/clientes/:id", autenticarToken, async (req, res) => {
       "UPDATE cliente SET nome=$1, telefone=$2, is_ativo=$3 WHERE id=$4",
       [nome, telefone, is_ativo, id]
     );
+    // Se o cliente foi inativado, inativa todas as lojas vinculadas
+    if (is_ativo === false || is_ativo === 0) {
+      await pool.query(
+        "UPDATE loja SET is_ativo = false WHERE cliente_id = $1",
+        [id]
+      );
+    }
+    // Se o cliente foi reativado, reativa todas as lojas vinculadas
+    if (is_ativo === true || is_ativo === 1) {
+      await pool.query(
+        "UPDATE loja SET is_ativo = true WHERE cliente_id = $1",
+        [id]
+      );
+    }
     if (result.rowCount) {
       res.json({ id, nome, telefone, is_ativo });
     } else {
@@ -1034,6 +1028,19 @@ app.get("/api/amazon/reports/download/:reportDocumentId", async (req, res) => {
 
 //////////////////////////////
 
+app.get("/health", (req, res) => {
+  res.json({ status: "ok", timestamp: new Date() });
+});
+
+// Middleware de erro (assinatura correta)
+app.use((err, req, res) => {
+  console.error("Erro não tratado:", err);
+  res.status(500).json({ error: "Erro interno do servidor" });
+});
+
+app.listen(process.env.PORT || 3001, () => {
+  console.log(`Servidor rodando na porta ${process.env.PORT || 3001}`);
+});
 app.get("/health", (req, res) => {
   res.json({ status: "ok", timestamp: new Date() });
 });

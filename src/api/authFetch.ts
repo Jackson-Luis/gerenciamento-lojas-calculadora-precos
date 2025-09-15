@@ -25,7 +25,6 @@ export function getCurrentUser(): {
   id: number;
   nome: string;
   email: string;
-  cargo_superior: boolean;
   administrador_geral: boolean;
   calculadora_liberada: boolean;
   relatorio_liberado: boolean;

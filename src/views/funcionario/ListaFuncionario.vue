@@ -23,9 +23,9 @@
       :multisort="true"
       class="table table-bordered"
     >
-      <template #cell(cargo_superior)="{ item}"> 
+      <!-- <template #cell(cargo_superior)="{ item}"> 
         {{ item.cargo_superior ? 'Sim' : 'Não' }}
-      </template>
+      </template> -->
       <template #cell(is_ativo)="{ item}"> 
         {{ item.is_ativo ? 'Sim' : 'Não' }}
       </template>
@@ -47,7 +47,7 @@
           />
         </BInputGroup>
       </template>
-      <template #cell(actions)="{ item }">
+      <template #cell(actions)="{ item }" v-if="currentUser?.administrador_geral">
         <BDropdown
           size="sm"
           variant="link"
@@ -113,6 +113,7 @@ import {
 import ToastAlert from "@/components/ToastAlert.vue";
 import { useToastAlert } from "@/composables/useToastAlert";
 import ModalFuncionario from "./ModalFuncionario.vue";
+import { getCurrentUser } from "@/api/authFetch";
 
 interface Funcionario {
   id?: number;
@@ -120,7 +121,6 @@ interface Funcionario {
   telefone: string;
   email?: string;
   senha?: string;
-  cargo_superior?: boolean;
   valor_receber?: number;
   data_receber_pagamento?: string;
   chave_pix?: string;
@@ -132,7 +132,6 @@ interface Funcionario {
 }
 
 const funcionarios = ref<Funcionario[]>([]);
-
 const showConfirmModal = ref(false);
 const idParaExcluir = ref<number | null>(null);
 const showModal = ref(false);
@@ -175,10 +174,6 @@ const fields: TableFieldRaw<Funcionario>[] = [
     label: "ADM",
   },
   {
-    key: "cargo_superior",
-    label: "Cargo superior",
-  },
-  {
     key: "valor_receber",
     label: "Valor a receber",
   },
@@ -196,6 +191,9 @@ const fields: TableFieldRaw<Funcionario>[] = [
     sortable: false,
   },
 ];
+//filtragem de dados mostrado na tela de acordo com as permissões do usuário atual logado
+
+const currentUser = getCurrentUser();
 
 const filter = ref("");
 
@@ -210,7 +208,7 @@ const filteredItems = computed(() => {
       item.nome.toLowerCase().includes(lcFilter.value) ||
       item.telefone.toLowerCase().includes(lcFilter.value) ||
       item.email?.toLowerCase().includes(lcFilter.value) ||
-      item.cargo_superior?.toString().includes(lcFilter.value) ||
+      // item.cargo_superior?.toString().includes(lcFilter.value) ||
       item.valor_receber?.toString().includes(lcFilter.value) ||
       item.data_receber_pagamento?.toLowerCase().includes(lcFilter.value) ||
       item.chave_pix?.toLowerCase().includes(lcFilter.value) ||
@@ -237,7 +235,7 @@ async function carregar() {
   const rows = await resp.json();
   funcionarios.value = rows.map((r: Funcionario) => ({
     ...r,
-    cargo_superior: !!r.cargo_superior,
+    administrador_geral: !!r.administrador_geral,
   }));
   console.log(funcionarios.value)
   funcionarios.value.sort((a, b) => a.nome.localeCompare(b.nome));

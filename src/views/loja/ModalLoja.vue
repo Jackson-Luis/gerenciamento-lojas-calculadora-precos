@@ -8,7 +8,7 @@
             </div>
             <div class="mb-2">
                 <label>Funcionário:</label>
-                <select v-model="form.funcionario_id" class="form-control" :disabled="isAdmin" required>
+                <select v-model="form.funcionario_id" class="form-control" required>
                 <option value="" disabled>Selecione</option>
                 <option v-for="f in listaFuncionario" :key="f.id" :value="f.id">{{ f.nome }}</option>
                 </select>
@@ -66,8 +66,7 @@ const emit = defineEmits<{
 }>();
 
 const currentUser = computed(() => getCurrentUser());
-const isAdmin = computed(() => !!currentUser.value?.cargo_superior);
-const funcionarioNaoAdmin = computed(() => !isAdmin.value ? null : currentUser.value?.id || null); 
+const funcionarioNaoAdmin = computed(() => currentUser.value?.id || null); 
 
 const showModal = ref(props.modelValue);
 const isLoading = ref(false);

@@ -72,7 +72,7 @@ const showPasswordModal = ref(false);
 const { showToast: toast } = useToastAlert();
 
 const currentUser = computed(() => getCurrentUser());
-const isAdmin = computed(() => !!currentUser.value?.cargo_superior);
+const isAdmin = computed(() => !!currentUser.value?.administrador_geral);
 
 function emitChangeColor() {
   emit("update:corAtual", props.corAtual === "dark" ? "light" : "dark");

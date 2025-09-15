@@ -75,7 +75,7 @@ function checkAuthToken(token: string): boolean {
     id: number;
     nome: string;
     email: string;
-    cargo_superior: boolean;
+    administrador_geral: boolean;
     iat: number;
     exp: number;
   }

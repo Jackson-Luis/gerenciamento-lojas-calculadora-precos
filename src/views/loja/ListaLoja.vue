@@ -223,7 +223,8 @@ watch(filter, () => {
 async function carregar() {
   const user = getCurrentUser();
   let lojasUrl = `https://gerenciamento-lojas-calculadora-precos.onrender.com/lojas`;
-  if (user && user.id && user.id !== 0) {
+  // Se não for administrador_geral, filtra por funcionário
+  if (!user?.administrador_geral && user && user.id && user.id !== 0) {
     lojasUrl += `?funcionario_id=${user.id}`;
   }
   const [lojasResp, funcsResp, clientesResp] = await Promise.all([
@@ -236,8 +237,8 @@ async function carregar() {
     ),
   ]);
   let lojasData = await lojasResp.json();
-  // Se não for admin, filtra no frontend também
-  if (user && user.id && user.id !== 0) {
+  // Se não for administrador_geral, filtra no frontend também
+  if (!user?.administrador_geral && user && user.id && user.id !== 0) {
     lojasData = lojasData.filter((l: Loja) => l.funcionario_id === user.id);
   }
   lojas.value = lojasData;

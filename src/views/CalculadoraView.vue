@@ -89,7 +89,7 @@
 </template>
 
 <script setup lang="ts">
-import { ref, computed } from "vue";
+import { ref, computed, onMounted } from "vue";
 import {
   BFormInput,
   BCard,
@@ -102,6 +102,7 @@ import {
   BFormSelect,
   BInputGroupText
 } from "bootstrap-vue-next";
+import { getCurrentUser } from "@/api/authFetch";
 
 const valor = ref<number | string>("");
 const porcentagemVarianteAmazon = ref<number | string>("");
@@ -215,4 +216,11 @@ const amazonCalculos = computed(() => {
     total >= 30 ? 8 : 4.5
   );
 });
+
+onMounted(() => {
+  const user = getCurrentUser();
+  if (user && user.calculadora_liberada === false) {
+    window.location.href = "/";
+  }
+})
 </script>

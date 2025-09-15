@@ -97,14 +97,14 @@ async function carregarLojas() {
     }
     const user = getCurrentUser();
     let url = `https://gerenciamento-lojas-calculadora-precos.onrender.com/lojas`;
-    // Se não for admin, filtra por funcionário
-    if (user && user.id && user.id !== 0) {
+    // Se não for administrador_geral, filtra por funcionário
+    if (!user?.administrador_geral && user && user.id && user.id !== 0) {
       url += `?funcionario_id=${user.id}`;
     }
     const resp = await authFetch(url);
     let data = await resp.json();
-    // Se não for admin, filtra no frontend também
-    if (user && user.id && user.id !== 0) {
+    // Se não for administrador_geral, filtra no frontend também
+    if (!user?.administrador_geral && user && user.id && user.id !== 0) {
       data = data.filter((l: Loja) => l.funcionario_id === user.id);
     }
     lojas.value = data;

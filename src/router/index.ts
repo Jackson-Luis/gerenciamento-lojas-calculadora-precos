@@ -71,16 +71,44 @@ const router = createRouter({
   routes
 })
 
-// Navigation guard para autenticação
+// Navigation guard para autenticação e permissão
 router.beforeEach((to, from, next) => {
   const token = localStorage.getItem('token');
-  const rotasPublicas = ['login', 'calculadoraDeslogada'];
+  const user = JSON.parse(localStorage.getItem('user') || 'null');
+  const rotasPublicas = ['login', 'calculadoraDeslogada', 'esqueci-senha', 'recuperar-senha'];
+
   if (!rotasPublicas.includes(to.name as string) && !token) {
-    // Sempre redireciona para login se não autenticado, mesmo por URL
     next({ name: 'login' });
-  } else {
-    next();
+    return;
   }
+
+  // Permissões por rota
+  const rotaPermissao: Record<string, (user: any) => boolean> = {
+    relatorio: (u) => u?.relatorio_liberado || u?.administrador_geral,
+    funcionario: (u) => u?.administrador_geral,
+    cliente: (u) => u?.administrador_geral,
+    loja: (u) => u?.administrador_geral,
+    calculadora: (u) => u?.calculadora_liberada || u?.administrador_geral,
+    // Outras rotas podem ser adicionadas aqui se necessário
+  };
+
+  if (to.name && rotaPermissao[to.name as string]) {
+    if (!rotaPermissao[to.name as string](user)) {
+      // Redireciona para a primeira rota que o usuário tem permissão
+      if (user?.administrador_geral) {
+        next({ name: 'relatorio' });
+      } else if (user?.relatorio_liberado) {
+        next({ name: 'relatorio' });
+      } else if (user?.calculadora_liberada) {
+        next({ name: 'calculadora' });
+      } else {
+        next({ name: 'login' });
+      }
+      return;
+    }
+  }
+
+  next();
 });
 
 export default router

@@ -9,18 +9,18 @@
         <BNavItem v-if="isAdmin" to="/funcionario" tag="router-link"
           >Funcionários</BNavItem
         >
-        <BNavItem v-if="isAdmin" to="/cliente" tag="router-link"
+        <BNavItem v-if="currentUser?.relatorio_liberado || isAdmin" to="/cliente" tag="router-link"
           >Clientes</BNavItem
         >
-        <BNavItem v-if="isAdmin" to="/loja" tag="router-link"
+        <BNavItem v-if="currentUser?.relatorio_liberado || isAdmin" to="/loja" tag="router-link"
           >Lojas</BNavItem
         >
 
-        <BNavItem to="/relatorio" tag="router-link">Relatório</BNavItem>
+        <BNavItem v-if="currentUser?.relatorio_liberado || isAdmin" to="/relatorio" tag="router-link">Relatório</BNavItem>
 
         <BNavItem to="/criacao-ia" tag="router-link">Criação com IA (Experimental incompleta)</BNavItem>
         
-        <BNavItem to="/calculadora" tag="router-link">Calculadora</BNavItem>
+        <BNavItem v-if="currentUser?.calculadora_liberada || isAdmin" to="/calculadora" tag="router-link">Calculadora</BNavItem>
         <BNavItem @click="emitChangeColor" href="javascript:void(0)">
           Modo {{ corAtual == "dark" ? "Escuro" : "Claro" }}
         </BNavItem>

@@ -10,6 +10,9 @@
                 <label>Telefone:</label>
                 <input v-model="form.telefone" required class="form-control" @input="maskTelefone" maxlength="15" />
             </div>
+            <div class="mb-2">
+                <BFormCheckbox switch v-model="form.isAtivo">Ativo</BFormCheckbox>
+            </div>
             <hr />
             <div class="mb-2 d-flex justify-content-end">
                 <BButton class="btn btn-success" type="submit">{{ form.id ? 'Atualizar' : 'Adicionar' }}</BButton>
@@ -20,13 +23,14 @@
 </template>
 <script setup lang="ts">
 import { reactive, ref, watch, defineProps, defineEmits } from 'vue'
-import { BModal, BButton } from 'bootstrap-vue-next'
+import { BModal, BButton, BFormCheckbox } from 'bootstrap-vue-next'
 import { authFetch } from '@/api/authFetch'
 
 interface Cliente {
   id?: number | null
   nome: string
   telefone: string
+  isAtivo: boolean
 }
 
 const props = defineProps<{
@@ -44,6 +48,7 @@ const form = reactive({
     id: undefined as number | undefined,
     nome: '',
     telefone: '',
+    isAtivo: true,
 })
 
 watch(() => props.modelValue, (newVal) => {
@@ -56,6 +61,7 @@ watch(() => showModal.value, (newVal) => {
         form.id = props.edicaoCliente.id
         form.nome = props.edicaoCliente.nome
         form.telefone = props.edicaoCliente.telefone
+        form.isAtivo = props.edicaoCliente.isAtivo ?? true
     } else {
         reset()
     }
@@ -70,6 +76,7 @@ function reset() {
     form.id = undefined
     form.nome = ''
     form.telefone = ''
+    form.isAtivo = true
 }
 function maskTelefone(event: Event) {
     const input = event.target as HTMLInputElement

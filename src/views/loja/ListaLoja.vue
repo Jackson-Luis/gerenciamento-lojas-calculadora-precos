@@ -29,6 +29,9 @@
     <template #cell(cliente_id)="{ item }">
       {{ item.cliente_nome }}
     </template>
+      <template #cell(isAtivo)="{ item }">
+        {{ item.isAtivo ? 'Sim' : 'Não' }}
+      </template>
       <template #cell(actions)="{ item }">
         <BDropdown
           size="sm"
@@ -176,6 +179,10 @@ const fields: TableFieldRaw<Loja>[] = [
   {
     key: "vendas_total",
     label: "Vendas totais",
+  },
+  {
+    key: "isAtivo",
+    label: "Ativo",
   },
   {
     key: "actions",

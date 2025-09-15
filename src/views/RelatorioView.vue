@@ -78,6 +78,7 @@ interface Loja {
   visitas_semana: number;
   produto_mais_visitado: string;
   vendas_total: number;
+  isAtivo: boolean;
 }
 
 const lojas = ref<Loja[]>([]);

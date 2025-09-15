@@ -90,7 +90,7 @@ const form = reactive({
     calculadora_liberada: false,
     relatorio_liberado: false,
     administrador_geral: false,
-    isAtivo: false
+    isAtivo: true
 })
 watch(() => props.modelValue, (newVal) => {
     showModal.value = newVal
@@ -108,7 +108,7 @@ watch(() => showModal.value, (newVal) => {
         form.calculadora_liberada = props.edicaoFuncionario.calculadora_liberada
         form.relatorio_liberado = props.edicaoFuncionario.relatorio_liberado
         form.administrador_geral = props.edicaoFuncionario.administrador_geral
-        form.isAtivo = props.edicaoFuncionario.isAtivo
+        form.isAtivo = props.edicaoFuncionario.isAtivo ?? true
     } else {
         reset()
     }
@@ -130,7 +130,7 @@ function reset() {
     form.calculadora_liberada = false
     form.relatorio_liberado = false
     form.administrador_geral = false
-    form.isAtivo = false
+    form.isAtivo = true
     error.value = ''
 }
 

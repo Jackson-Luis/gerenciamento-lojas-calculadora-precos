@@ -23,6 +23,9 @@
       :multisort="true"
       class="table table-bordered"
     >
+      <template #cell(isAtivo)="{ item }">
+        {{ item.isAtivo ? 'Sim' : 'Não' }}
+      </template>
       <template #cell(actions)="{ item }">
         <BDropdown
           size="sm"
@@ -90,14 +93,15 @@ import { useToastAlert } from "@/composables/useToastAlert";
 import ModalCliente from "./ModalCliente.vue";
 
 interface Cliente {
-  id?: number;
+  id: number;
   nome: string;
   telefone: string;
+  isAtivo: boolean;
 }
 
 const clientes = ref<Cliente[]>([]);
 const showConfirmModal = ref(false);
-const idParaExcluir = ref<number | null>(null);
+const idParaExcluir = ref(null);
 const showModal = ref(false);
 const editarCliente = ref<Cliente | null>(null);
 const { toastMsg, toastType, showToast } = useToastAlert();
@@ -112,7 +116,7 @@ const pageOptions = [
   { value: 15, text: "15" },
   { value: clientes.value.length, text: "Todos" },
 ];
-const fields: TableFieldRaw<Cliente>[] = [
+const fields = [
   {
     key: "nome",
     label: "Nome",
@@ -120,6 +124,10 @@ const fields: TableFieldRaw<Cliente>[] = [
   {
     key: "telefone",
     label: "Telefone",
+  },
+  {
+    key: "isAtivo",
+    label: "Ativo",
   },
   {
     key: "actions",
@@ -139,7 +147,8 @@ const filteredItems = computed(() => {
   return clientes.value.filter(
     (item) =>
       item.nome.toLowerCase().includes(lcFilter.value) ||
-      item.telefone.toLowerCase().includes(lcFilter.value)
+      item.telefone.toLowerCase().includes(lcFilter.value) ||
+      (item.isAtivo ? "ativo" : "inativo").includes(lcFilter.value)
   );
 });
 const rows = computed(() => filteredItems.value.length);
@@ -170,7 +179,7 @@ function editar(c: Cliente) {
   showModal.value = true;
 }
 
-async function excluir(id: number) {
+async function excluir(id: null) {
   idParaExcluir.value = id;
   showConfirmModal.value = true;
 }

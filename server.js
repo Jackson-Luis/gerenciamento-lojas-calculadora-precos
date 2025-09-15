@@ -95,7 +95,7 @@ app.post("/login", async (req, res) => {
     if (!senhaCorreta) {
       return res.status(401).json({ error: "E-mail ou Senha incorreta" });
     }
-    // if (!funcionario.isAtivo) {
+    // if (!funcionario.is_ativo) {
     //   return res.status(403).json({ error: "E-mail ou Senha incorreta" });
     // }
 
@@ -170,7 +170,7 @@ app.post("/funcionarios", autenticarToken, async (req, res) => {
     relatorio_liberado,
     calculadora_liberada,
     administrador_geral,
-    isAtivo,
+    is_ativo,
   } = req.body;
   try {
     if (!nome || !email || !senha)
@@ -189,7 +189,7 @@ app.post("/funcionarios", autenticarToken, async (req, res) => {
 
     const senhaHash = await bcrypt.hash(senha, 10);
     const { rows } = await pool.query(
-      `INSERT INTO funcionario (nome, telefone, email, senha, cargo_superior, valor_receber, data_receber_pagamento, chave_pix, relatorio_liberado, calculadora_liberada, administrador_geral, isAtivo)
+      `INSERT INTO funcionario (nome, telefone, email, senha, cargo_superior, valor_receber, data_receber_pagamento, chave_pix, relatorio_liberado, calculadora_liberada, administrador_geral, is_ativo)
        VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12) RETURNING id`,
       [
         nome,
@@ -203,7 +203,7 @@ app.post("/funcionarios", autenticarToken, async (req, res) => {
         relatorio_liberado,
         calculadora_liberada,
         administrador_geral,
-        isAtivo,
+        is_ativo,
       ]
     );
     res.status(201).json({
@@ -218,7 +218,7 @@ app.post("/funcionarios", autenticarToken, async (req, res) => {
       relatorio_liberado,
       calculadora_liberada,
       administrador_geral,
-      isAtivo,
+      is_ativo,
     });
   } catch (err) {
     res
@@ -241,7 +241,7 @@ app.put("/funcionarios/:id", autenticarToken, async (req, res) => {
     relatorio_liberado,
     calculadora_liberada,
     administrador_geral,
-    isAtivo,
+    is_ativo,
   } = req.body;
   try {
     if (!nome || !email)
@@ -265,7 +265,7 @@ app.put("/funcionarios/:id", autenticarToken, async (req, res) => {
     const result = await pool.query(
       `UPDATE funcionario SET nome = $1, telefone = $2, email = $3,
         cargo_superior = $4, valor_receber = $5, data_receber_pagamento = $6, chave_pix = $7,
-        relatorio_liberado = $8, calculadora_liberada = $9, administrador_geral = $10, isAtivo = $11
+        relatorio_liberado = $8, calculadora_liberada = $9, administrador_geral = $10, is_ativo = $11
         WHERE id = $12`,
       [
         nome,
@@ -278,7 +278,7 @@ app.put("/funcionarios/:id", autenticarToken, async (req, res) => {
         relatorio_liberado,
         calculadora_liberada,
         administrador_geral,
-        isAtivo,
+        is_ativo,
         id,
       ]
     );
@@ -295,7 +295,7 @@ app.put("/funcionarios/:id", autenticarToken, async (req, res) => {
         relatorio_liberado,
         calculadora_liberada,
         administrador_geral,
-        isAtivo,
+        is_ativo,
       });
     } else {
       res.status(404).json({ error: "Funcionário não encontrado" });
@@ -345,12 +345,12 @@ app.get("/clientes", autenticarToken, async (req, res) => {
 
 app.post("/clientes", autenticarToken, async (req, res) => {
   try {
-    const { nome, telefone, isAtivo } = req.body;
+    const { nome, telefone, is_ativo } = req.body;
     const result = await pool.query(
-      "INSERT INTO cliente (nome, telefone, isAtivo) VALUES ($1, $2, $3) RETURNING id",
-      [nome, telefone, isAtivo]
+      "INSERT INTO cliente (nome, telefone, is_ativo) VALUES ($1, $2, $3) RETURNING id",
+      [nome, telefone, is_ativo]
     );
-    res.status(201).json({ id: result.rows[0].id, nome, telefone, isAtivo });
+    res.status(201).json({ id: result.rows[0].id, nome, telefone, is_ativo });
   } catch (err) {
     res
       .status(500)
@@ -361,10 +361,10 @@ app.post("/clientes", autenticarToken, async (req, res) => {
 app.put("/clientes/:id", autenticarToken, async (req, res) => {
   try {
     const id = parseInt(req.params.id, 10);
-    const { nome, telefone, isAtivo } = req.body;
+    const { nome, telefone, is_ativo } = req.body;
     const result = await pool.query(
-      "UPDATE cliente SET nome=$1, telefone=$2, isAtivo=$3 WHERE id=$4",
-      [nome, telefone, isAtivo, id]
+      "UPDATE cliente SET nome=$1, telefone=$2, is_ativo=$3 WHERE id=$4",
+      [nome, telefone, is_ativo, id]
     );
     if (result.rowCount) {
       res.json({ id, nome, telefone });
@@ -432,12 +432,12 @@ app.post("/lojas", autenticarToken, async (req, res) => {
     visitas_semana,
     produto_mais_visitado,
     vendas_total,
-    isAtivo,
+    is_ativo,
   } = req.body;
   try {
     const result = await pool.query(
       `
-      INSERT INTO loja (funcionario_id, cliente_id, nome, anuncios_total, anuncios_realizados, anuncios_otimizados, visitas_semana, produto_mais_visitado, vendas_total, isAtivo)
+      INSERT INTO loja (funcionario_id, cliente_id, nome, anuncios_total, anuncios_realizados, anuncios_otimizados, visitas_semana, produto_mais_visitado, vendas_total, is_ativo)
       VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10) RETURNING id
     `,
       [
@@ -450,7 +450,7 @@ app.post("/lojas", autenticarToken, async (req, res) => {
         visitas_semana,
         produto_mais_visitado,
         vendas_total,
-        isAtivo,
+        is_ativo,
       ]
     );
     res.status(201).json({ id: result.rows[0].id });
@@ -471,12 +471,12 @@ app.put("/lojas/:id", autenticarToken, async (req, res) => {
     visitas_semana,
     produto_mais_visitado,
     vendas_total,
-    isAtivo,
+    is_ativo,
   } = req.body;
   try {
     const result = await pool.query(
       `
-      UPDATE loja SET funcionario_id=$1, cliente_id=$2, nome=$3, anuncios_total=$4, anuncios_realizados=$5, anuncios_otimizados=$6, visitas_semana=$7, produto_mais_visitado=$8, vendas_total=$9, isAtivo=$10 WHERE id=$11
+      UPDATE loja SET funcionario_id=$1, cliente_id=$2, nome=$3, anuncios_total=$4, anuncios_realizados=$5, anuncios_otimizados=$6, visitas_semana=$7, produto_mais_visitado=$8, vendas_total=$9, is_ativo=$10 WHERE id=$11
     `,
       [
         funcionario_id,
@@ -488,7 +488,7 @@ app.put("/lojas/:id", autenticarToken, async (req, res) => {
         visitas_semana,
         produto_mais_visitado,
         vendas_total,
-        isAtivo,
+        is_ativo,
         id,
       ]
     );

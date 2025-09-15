@@ -20,6 +20,9 @@
                 <option v-for="c in listaCliente" :key="c.id" :value="c.id">{{ c.nome }}</option>
                 </select>
             </div>
+            <div class="mb-2">
+                <BFormCheckbox switch v-model="form.isAtivo">Ativo</BFormCheckbox>
+            </div>
             <div class="mb-2 d-flex justify-content-end">
                 <BButton class="btn btn-success" type="submit">{{ form.id ? 'Atualizar' : 'Adicionar' }}</BButton>
                 <BButton class="btn btn-secondary ms-2" type="button" @click="cancelar">Cancelar</BButton>
@@ -30,7 +33,7 @@
 
 <script setup lang="ts">
 import { reactive, ref, watch, defineProps, defineEmits, computed } from "vue";
-import { BButton, BModal } from "bootstrap-vue-next";
+import { BButton, BModal, BFormCheckbox } from "bootstrap-vue-next";
 import { getCurrentUser } from "@/api/authFetch";
 import { authFetch } from "@/api/authFetch";
 
@@ -47,6 +50,7 @@ interface Loja {
   visitas_semana: number;
   produto_mais_visitado: string;
   vendas_total: number;
+  isAtivo: boolean;
 }
 
 const props = defineProps<{
@@ -73,13 +77,13 @@ const form = reactive({
   nome: "",
   funcionario_id: funcionarioNaoAdmin.value,
   cliente_id: null as number | null,
-// Desabilitados
   anuncios_total: 0,
   anuncios_realizados: 0,
   anuncios_otimizados: 0,
   visitas_semana: 0,
   produto_mais_visitado: "",
   vendas_total: 0,
+  isAtivo: true,
 });
 
 
@@ -106,6 +110,7 @@ watch(
       form.visitas_semana = props.edicaoLoja.visitas_semana;
       form.produto_mais_visitado = props.edicaoLoja.produto_mais_visitado;
       form.vendas_total = props.edicaoLoja.vendas_total;
+      form.isAtivo = props.edicaoLoja.isAtivo ?? true;
     } else {
       reset();
     }
@@ -122,6 +127,7 @@ function reset() {
   form.nome = "";
   form.funcionario_id = funcionarioNaoAdmin.value;
   form.cliente_id = null;
+  form.isAtivo = true;
   error.value = "";
 }
 

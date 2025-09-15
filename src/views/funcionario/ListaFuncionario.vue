@@ -213,7 +213,8 @@ const filteredItems = computed(() => {
       item.cargo_superior?.toString().includes(lcFilter.value) ||
       item.valor_receber?.toString().includes(lcFilter.value) ||
       item.data_receber_pagamento?.toLowerCase().includes(lcFilter.value) ||
-      item.chave_pix?.toLowerCase().includes(lcFilter.value)
+      item.chave_pix?.toLowerCase().includes(lcFilter.value) ||
+      (item.isAtivo ? "ativo" : "inativo").includes(lcFilter.value)
   );
 });
 const rows =  computed(() => filteredItems.value.length)

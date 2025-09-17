@@ -10,6 +10,9 @@ import OpenAI from "openai";
 import cron from "node-cron";
 import aws4 from "aws4"; // <- necessário para assinatura SigV4
 import fetch from "node-fetch"; // <- para compatibilidade (Node < 18)
+import axios from "axios";
+import zlib from "zlib";
+
 
 dotenv.config();
 
@@ -54,10 +57,10 @@ function autenticarToken(req, res, next) {
 
 cron.schedule("*/4 * * * *", async () => {
   try {
-    const response = await fetch(
+    await fetch(
       "https://gerenciamento-lojas-calculadora-precos.onrender.com/test-db"
     );
-    console.log(`Ping enviado. Status: ${response.status}`);
+    // console.log(`Ping enviado. Status: ${response.status}`);
   } catch (error) {
     console.error("Erro ao pingar o servidor:", error.message);
   }
@@ -171,7 +174,7 @@ app.post("/funcionarios", autenticarToken, async (req, res) => {
     is_ativo,
   } = req.body;
   try {
-    if (!nome || !email )
+    if (!nome || !email)
       return res
         .status(400)
         .json({ error: "Nome, email e senha são obrigatórios" });
@@ -955,10 +958,29 @@ app.get("/api/amazon/inventory", async (req, res) => {
 // === 9) Criar solicitação de relatório de anúncios ===
 app.post("/api/amazon/reports/create", async (req, res) => {
   try {
+    const { startDate, endDate, sellerId, marketplaceIds, reportType } = req.body;
+
+    if (!sellerId || !marketplaceIds) {
+      return res.status(400).json({
+        ok: false,
+        detail: "sellerId e marketplaceIds são obrigatórios",
+      });
+    }
+
     const accessToken = await getAccessTokenWithRefresh();
+
+    // Determinar reportType automaticamente se não passado
+    let typeToUse = reportType;
+    if (!typeToUse) {
+      // default para pedidos (mais vendidos)
+      typeToUse = "GET_FLAT_FILE_ALL_ORDERS_DATA_BY_ORDER_DATE_GENERAL";
+    }
+
     const body = {
-      reportType: "GET_FLAT_FILE_OPEN_LISTINGS_DATA",
-      marketplaceIds: ["A2Q3Y263D00KWC"], // Brasil
+      reportType: typeToUse,
+      marketplaceIds: Array.isArray(marketplaceIds) ? marketplaceIds : [marketplaceIds],
+      ...(startDate && { dataStartTime: startDate }),
+      ...(endDate && { dataEndTime: endDate }),
     };
 
     const result = await spApiFetch({
@@ -972,11 +994,10 @@ app.post("/api/amazon/reports/create", async (req, res) => {
     res.json({ ok: true, reportRequest: result });
   } catch (err) {
     console.error(err);
-    res
-      .status(500)
-      .json({ error: "Erro ao criar relatório", detail: err.message });
+    res.status(500).json({ error: "Erro ao criar relatório", detail: err.message });
   }
 });
+
 
 // === 10) Consultar status do relatório por reportId ===
 app.get("/api/amazon/reports/:reportId", async (req, res) => {
@@ -1001,6 +1022,8 @@ app.get("/api/amazon/reports/:reportId", async (req, res) => {
 });
 
 // === 11) Baixar conteúdo do relatório ===
+import Papa from "papaparse"; // precisa instalar: npm i papaparse
+
 app.get("/api/amazon/reports/download/:reportDocumentId", async (req, res) => {
   try {
     const accessToken = await getAccessTokenWithRefresh();
@@ -1017,7 +1040,10 @@ app.get("/api/amazon/reports/download/:reportDocumentId", async (req, res) => {
     const csvResp = await fetch(docMeta.url);
     const csvText = await csvResp.text();
 
-    res.type("text/plain").send(csvText);
+    // Converter CSV → JSON
+    const parsed = Papa.parse(csvText, { header: true, skipEmptyLines: true });
+
+    res.json({ ok: true, data: parsed.data });
   } catch (err) {
     console.error(err);
     res
@@ -1025,6 +1051,101 @@ app.get("/api/amazon/reports/download/:reportDocumentId", async (req, res) => {
       .json({ error: "Erro ao baixar relatório", detail: err.message });
   }
 });
+
+// === Endpoint completo: relatório de vendas e visualizações ===
+
+app.post("/api/amazon/reports/metrics", async (req, res) => {
+  try {
+    const { startDate, endDate, sellerId, marketplaceIds, reportType } = req.body;
+
+    if (!sellerId || !marketplaceIds) {
+      return res.status(400).json({
+        ok: false,
+        detail: "sellerId e marketplaceIds são obrigatórios",
+      });
+    }
+
+    const accessToken = await getAccessTokenWithRefresh();
+
+    // Relatório padrão → pedidos
+    const typeToUse =
+      reportType || "GET_FLAT_FILE_ALL_ORDERS_DATA_BY_ORDER_DATE_GENERAL";
+
+    // 1) Criar relatório
+    const createResp = await spApiFetch({
+      path: "/reports/2021-06-30/reports",
+      method: "POST",
+      body: {
+        reportType: typeToUse,
+        marketplaceIds: Array.isArray(marketplaceIds)
+          ? marketplaceIds
+          : [marketplaceIds],
+        ...(startDate && { dataStartTime: startDate }),
+        ...(endDate && { dataEndTime: endDate }),
+      },
+      accessToken,
+      useSandbox: false,
+    });
+
+    const reportId = createResp.reportId;
+    if (!reportId) {
+      return res
+        .status(400)
+        .json({ ok: false, detail: "Não foi possível criar relatório" });
+    }
+
+    // 2) Esperar relatório ficar pronto
+    let reportStatus = null;
+    for (let i = 0; i < 10; i++) {
+      await new Promise((r) => setTimeout(r, 5000));
+      const statusResp = await spApiFetch({
+        path: `/reports/2021-06-30/reports/${reportId}`,
+        method: "GET",
+        accessToken,
+        useSandbox: false,
+      });
+      if (statusResp.processingStatus === "DONE") {
+        reportStatus = statusResp;
+        break;
+      }
+    }
+
+    if (!reportStatus || !reportStatus.reportDocumentId) {
+      return res
+        .status(400)
+        .json({ ok: false, detail: "Relatório não ficou pronto a tempo" });
+    }
+
+    const reportDocumentId = reportStatus.reportDocumentId;
+
+    // 3) Baixar relatório bruto
+    const downloadResp = await spApiFetch({
+      path: `/reports/2021-06-30/documents/${reportDocumentId}`,
+      method: "GET",
+      accessToken,
+      useSandbox: false,
+    });
+
+    // URL temporária do CSV (às vezes vem gzipado)
+    const fileResp = await axios.get(downloadResp.url, {
+      responseType: "arraybuffer", // mantém binário
+    });
+
+    // Retornar como arquivo CSV/GZIP direto
+    res.setHeader("Content-Type", "text/csv");
+    res.setHeader(
+      "Content-Disposition",
+      `attachment; filename="amazon-report-${reportId}.csv"`
+    );
+    res.send(fileResp.data);
+  } catch (err) {
+    console.error(err);
+    res
+      .status(500)
+      .json({ ok: false, error: "Erro ao gerar relatório", detail: err.message });
+  }
+});
+
 
 //////////////////////////////
 
@@ -1045,12 +1166,18 @@ app.get("/health", (req, res) => {
   res.json({ status: "ok", timestamp: new Date() });
 });
 
-// Middleware de erro (assinatura correta)
-app.use((err, req, res) => {
+// Middleware de erro correto
+app.use((err, req, res, next) => {
   console.error("Erro não tratado:", err);
-  res.status(500).json({ error: "Erro interno do servidor" });
+  res.status(500).json({
+    error: "Erro interno do servidor",
+    detail: err.message,
+  });
 });
 
-app.listen(process.env.PORT || 3001, () => {
-  console.log(`Servidor rodando na porta ${process.env.PORT || 3001}`);
+// Inicia o servidor
+const port = process.env.PORT || 3001;
+app.listen(port, () => {
+  console.log(`Servidor rodando na porta ${port}`);
 });
+

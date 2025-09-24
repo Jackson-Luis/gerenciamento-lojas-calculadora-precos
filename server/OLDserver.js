@@ -5,7 +5,7 @@ import pkg from "pg";
 const { Pool } = pkg;
 import jwt from "jsonwebtoken";
 import bcrypt from "bcrypt";
-import { enviarEmail } from "./service/emailService.js";
+import { enviarEmail } from "../service/emailService.js";
 import OpenAI from "openai";
 import cron from "node-cron";
 import aws4 from "aws4"; // <- necessário para assinatura SigV4
@@ -35,6 +35,7 @@ app.use(
       "https://jackson-luis.github.io",
       "https://gerenciamento-lojas-calculadora-precos.onrender.com", // se consumir a si mesmo
       "http://localhost:8080",
+      "https://seoptmizer.com.br",
     ],
     credentials: true,
     methods: ["GET", "POST", "PUT", "DELETE", "OPTIONS"],
